@@ -1,0 +1,52 @@
+HGBEES_1 Steps
+
+-Initialize_D: 3.5268 (50%)
+	-Initializing variables: 0.0013079
+	-Setting initial dict. entries: 0.19517
+	-Update_vuw: 3.3303 (94%)
+		-v_time: 1.1205 (33%)
+		-u_time: 1.0966 (33%)
+		-w_time: 1.1132 (33%)
+
+-First Modify pointset: 3.5310, (50%) 
+	-Initialize Variables: 0.0008604  
+	-Check/Create Neighbors: 1.5041 (43%) 
+		-Key Conversion: 0.029656
+		-State conversion: 1.2696 (84%)[36%]{18%}
+		-isKey: 0.2048
+	-Resetting values: 0.0010164
+	-Update_vuw: 1.9654 (56%)
+		-v_time: 0.65759 (33%)
+		-u_time: 0.64802 (33%)
+		-w_time: 0.65977 (33%)
+	-Removing empties: 0.04733
+	-Updating probability: 0.012333
+
+-Second Modify pointset: 2.0231 (45%)
+	-Initialize Variables: 0.0029659
+	-Check/Create Neighbors: 1.0617 (52%)
+		-Key conversion: 0.022147
+		-State conversion: 0.92264 (87%)[46%]{21%}
+		-isKey: 0.11694
+	-Resetting values: 0.0018888
+	-Update_vuw: 0.9063
+		-v_time: 0.30347 
+		-u_time: 0.29951
+		-w_time: 0.30334
+	-Removing empties: 0.042586
+	-Updating probability: 0.007672  
+
+-RHS_P: 2.4515 (55%)
+	-Initialize variables: 0.0018046
+	-Initialize Flux: 0.32414 
+	-Solve v,u,w,th,t: 1.8985 (77%)
+	-Solve K: 0.22705
+
+-Updating Probability: 0.0019188
+
+-Time-marching y: 0.008616
+
+Total Time of initialization: 7.0578 (61%)
+Total Time of single step: 4.4851 (39%)
+Total Time (1 step): 11.5429
+		
