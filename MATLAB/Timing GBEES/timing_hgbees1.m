@@ -1,59 +1,96 @@
-function hgbees_1
 %%%%%%%%%%%%%%%%% begin user input %%%%%%%%%%%%%%%% 
 T=1; G.thresh=0.00002; G.start=[-11.5; -10; 9.5];
 G.dt=.0005; dt=.005; G.dx=0.4; G.d=3; G.sigma=4; G.b=1; G.r=48; G.L=30;
 %%%%%%%%%%%%%%%% end of user input %%%%%%%%%%%%%%%% 
 G.Y = eye(G.d,'int16'); [hD] = Initialize_D(G); 
 
-figure(1); clf; y=G.start; ys=y; 
-for timestep=1:10000
-  k1=RHS(y,G); k2=RHS(y+(dt/2)*k1,G); k3=RHS(y+(dt/2)*k2,G); k4=RHS(y+dt*k3,G);    
-  ynew=y+(dt/6)*k1+(dt/3)*(k2+k3)+(dt/6)*k4; ys=[ys ynew]; y=ynew;
-end
-plot3(ys(1,:),ys(2,:),ys(3,:),'g-','linewidth',1); view(-109,14);  hold on;
-lighting phong; light('Position',[-1 0 0]); drawnow;
+y=G.start; ys=y; t=0; [hD]=Modify_pointset(hD,G); 
 
-figure(2); clf; y=G.start; ys=y; 
-for timestep=1:T/dt
-  k1=RHS(y,G); k2=RHS(y+(dt/2)*k1,G); k3=RHS(y+(dt/2)*k2,G); k4=RHS(y+dt*k3,G);    
-  ynew=y+(dt/6)*k1+(dt/3)*(k2+k3)+(dt/6)*k4; ys=[ys ynew]; y=ynew;
-end
-plot3(ys(1,:),ys(2,:),ys(3,:),'k-','linewidth',2); view(-109,14);  hold on;
-plot3(ys(1,1),ys(2,1),ys(3,1),'k*'), plot3(ys(1,end),ys(2,end),ys(3,end),'k*');
-lighting phong; light('Position',[-1 0 0]); drawnow;
+%All Plots
+size = [];
 
-for P=1:200; y=G.start+0.5*randn(3,1); ys=y;
-  for timestep=1:T/dt
-    k1=RHS(y,G); k2=RHS(y+(dt/2)*k1,G); k3=RHS(y+(dt/2)*k2,G); k4=RHS(y+dt*k3,G);    
-    ynew=y+(dt/6)*k1+(dt/3)*(k2+k3)+(dt/6)*k4; ys=[ys ynew]; y=ynew;
-  end
-  plot3(ys(1,:),ys(2,:),ys(3,:),'c-.','linewidth',0.3); 
-  plot3(ys(1,1),ys(2,1),ys(3,1),'k+'), plot3(ys(1,end),ys(2,end),ys(3,end),'k+');
-  plot3(ys(1,41),ys(2,41),ys(3,41),'k+'); plot3(ys(1,81),ys(2,81),ys(3,81),'k+');
-  plot3(ys(1,121),ys(2,121),ys(3,121),'k+'); plot3(ys(1,161),ys(2,161),ys(3,161),'k+');
-  drawnow;
-end
+%Plot 1
+mod_time = []; rhs_time = [];  
 
-y=G.start; ys=y; t=0; [hD]=Modify_pointset(hD,G); Rotate_Plot(hD,G,ys);
+%Plot 2
+neighbors_time = []; vuw_time = []; remove_time = []; norm_time = [];
 
-for timestep=1:T/G.dt, disp("Timestep: "); disp(timestep); t=t+G.dt; if mod(timestep,1)==0, tic; [hD]=Modify_pointset(hD,G); disp("Modify: " + string(toc)); end
-  tic; K=RHS_P(hD,G); hD.keys = keys(hD.P); hD.P(hD.keys) = hD.P(hD.keys) + G.dt.*K;
-  k1=RHS(y,G); k2=RHS(y+(G.dt/2)*k1,G); k3=RHS(y+(G.dt/2)*k2,G); k4=RHS(y+G.dt*k3,G);    
-  ynew=y+(G.dt/6)*k1+(G.dt/3)*(k2+k3)+(G.dt/6)*k4; ys=[ys ynew]; y=ynew; disp("Time-marching: " + string(toc));
-  if mod(timestep,400)==0, Rotate_Plot(hD,G,ys),  end
-end, Rotate_Plot(hD,G,ys),
+%Plot 3
+state_conv_time = []; key_conv_time = []; key_check_time = [];
 
-%{
-figure(1);
-view(-109,14); print -depsc2 -image -r600 pdfA.v1.eps
-view(-31,2);   print -depsc2 -image -r600 pdfA.v2.eps
+%Plot 4
+initial_flux_time = []; total_flux_time = []; K_time = [];
 
-figure(2);
-view(-109,14); print -depsc2 -image -r600 trajA.v1.eps
-view(-31,2);   print -depsc2 -image -r600 trajA.v2.eps
-%}
+for timestep=1:T/G.dt, disp("Timestep: " + string(timestep)); t=t+G.dt; if mod(timestep,1)==0, [hD]=Modify_pointset(hD,G); mod_t = hD.mod_t; end
+    [K,hD]=RHS_P(hD,G); hD.keys = keys(hD.P); hD.P(hD.keys) = hD.P(hD.keys) + G.dt.*K; rhs_t = hD.rhs_t;
+    
+    %Plot 1
+    mod_time = [mod_time mod_t];
+    rhs_time = [rhs_time rhs_t];
+    size = [size length(hD.keys)];
+
+    %Plot 2
+    neighbors_time = [neighbors_time hD.neighbors_t];
+    vuw_time = [vuw_time hD.vuw_t];
+    remove_time = [remove_time hD.remove_t];
+    norm_time = [norm_time hD.fix_prob_t];
+
+    %Plot 3
+    state_conv_time = [state_conv_time hD.state_conv_t];
+    key_conv_time = [key_conv_time hD.key_conv_t];
+    key_check_time = [key_check_time hD.key_check_t];
+
+    %Plot 4
+    initial_flux_time = [initial_flux_time hD.initial_f_t];
+    total_flux_time = [total_flux_time hD.total_f_t];
+    K_time = [K_time hD.K_t];
 
 end
+
+figure(1); clf; hold on
+scatter(size, mod_time, 'k', 'filled', 'DisplayName', 'Modify Pointset');
+scatter(size, rhs_time, 'b', 'filled', 'DisplayName', 'RHS');
+title('Contribution to Total Timestep, HGBEES1', 'Interpreter','Latex', 'FontSize', 14);
+lgd = legend;
+lgd.Location = "best";
+lgd.FontSize = 10;
+xlabel('Size of Dictionary', 'Interpreter', 'Latex', 'FontSize', 10)
+ylabel('time of substep (s)', 'Interpreter', 'Latex', 'FontSize', 10)
+
+figure(2); clf; hold on
+scatter(size, neighbors_time, 'k', 'filled', 'DisplayName', 'Check/Create Neighbors');
+scatter(size, vuw_time, 'b', 'filled', 'DisplayName', 'Initialize VUW');
+scatter(size, remove_time, 'r', 'filled', 'DisplayName', 'Remove Small Entries');
+scatter(size, norm_time, 'g', 'filled', 'DisplayName', 'Normalize P');
+title('Contribution to Modify Pointset, HGBEES1', 'Interpreter','Latex', 'FontSize', 14);
+lgd = legend;
+lgd.Location = "best";
+lgd.FontSize = 10;
+xlabel('Size of Dictionary', 'Interpreter', 'Latex', 'FontSize', 10)
+ylabel('time of substep (s)', 'Interpreter', 'Latex', 'FontSize', 10)
+
+figure(3); clf; hold on
+scatter(size, state_conv_time, 'k', 'filled', 'DisplayName', 'State Conversion');
+scatter(size, key_conv_time, 'b', 'filled', 'DisplayName', 'Key Conversion');
+scatter(size, key_check_time, 'r', 'filled', 'DisplayName', 'Check Key');
+title('Contribution to Check/Create Neighbors, HGBEES1', 'Interpreter','Latex', 'FontSize', 14);
+lgd = legend;
+lgd.Location = "best";
+lgd.FontSize = 10;
+xlabel('Size of Dictionary', 'Interpreter', 'Latex', 'FontSize', 10)
+ylabel('time of substep (s)', 'Interpreter', 'Latex', 'FontSize', 10)
+
+figure(4); clf; hold on
+scatter(size, initial_flux_time, 'k', 'filled', 'DisplayName', 'Initial Flux');
+scatter(size, total_flux_time, 'b', 'filled', 'DisplayName', 'Total flux');
+scatter(size, K_time, 'r', 'filled', 'DisplayName', 'K');
+title('Contribution to RHS, HGBEES1', 'Interpreter','Latex', 'FontSize', 14);
+lgd = legend;
+lgd.Location = "best";
+lgd.FontSize = 10;
+xlabel('Size of Dictionary', 'Interpreter', 'Latex', 'FontSize', 10)
+ylabel('time of substep (s)', 'Interpreter', 'Latex', 'FontSize', 10)
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function [D] = Initialize_D(G)
     D.P = dictionary(); D.P("0") = 0;
@@ -120,79 +157,69 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function [D] = Modify_pointset(D,G) 
     D.keys = keys(D.P); D.m = numEntries(D.P);
+    state_conv_t = 0; key_conv_t = 0; key_check_t = 0;
     for l=2:D.m    % Check/Create Neighbors of Big Cells
         if(D.P(D.keys(l))>=G.thresh)
-            og_state = key_conversion(D.keys(l));
+            tic; og_state = key_conversion(D.keys(l)); key_conv_t = key_conv_t + toc;
     
             %   Faces (6)
-            new_key = state_conversion([og_state(1) + 1, og_state(2), og_state(3)]); if(~isKey(D.P, new_key)), D.P(new_key) = 0; end
-            new_key = state_conversion([og_state(1) - 1, og_state(2), og_state(3)]); if(~isKey(D.P, new_key)), D.P(new_key) = 0; end
-            new_key = state_conversion([og_state(1), og_state(2) + 1, og_state(3)]); if(~isKey(D.P, new_key)), D.P(new_key) = 0; end
-            new_key = state_conversion([og_state(1), og_state(2) - 1, og_state(3)]); if(~isKey(D.P, new_key)), D.P(new_key) = 0; end        
-            new_key = state_conversion([og_state(1), og_state(2), og_state(3) + 1]); if(~isKey(D.P, new_key)), D.P(new_key) = 0; end        
-            new_key = state_conversion([og_state(1), og_state(2), og_state(3) - 1]); if(~isKey(D.P, new_key)), D.P(new_key) = 0; end        
-    
+            tic; new_key = state_conversion([og_state(1) + 1, og_state(2), og_state(3)]); state_conv_t = state_conv_t + toc; tic; if(~isKey(D.P, new_key)), D.P(new_key) = 0; key_check_t = key_check_t + toc; end
+            tic; new_key = state_conversion([og_state(1) - 1, og_state(2), og_state(3)]); state_conv_t = state_conv_t + toc; tic; if(~isKey(D.P, new_key)), D.P(new_key) = 0; key_check_t = key_check_t + toc; end
+            tic; new_key = state_conversion([og_state(1), og_state(2) + 1, og_state(3)]); state_conv_t = state_conv_t + toc; tic; if(~isKey(D.P, new_key)), D.P(new_key) = 0; key_check_t = key_check_t + toc; end
+            tic; new_key = state_conversion([og_state(1), og_state(2) - 1, og_state(3)]); state_conv_t = state_conv_t + toc; tic; if(~isKey(D.P, new_key)), D.P(new_key) = 0; key_check_t = key_check_t + toc; end   
+            tic; new_key = state_conversion([og_state(1), og_state(2), og_state(3) + 1]); state_conv_t = state_conv_t + toc; tic; if(~isKey(D.P, new_key)), D.P(new_key) = 0; key_check_t = key_check_t + toc; end        
+            tic; new_key = state_conversion([og_state(1), og_state(2), og_state(3) - 1]); state_conv_t = state_conv_t + toc; tic; if(~isKey(D.P, new_key)), D.P(new_key) = 0; key_check_t = key_check_t + toc; end        
+     
             %   Edges (12)
-            new_key = state_conversion([og_state(1) + 1, og_state(2) + 1, og_state(3)]); if(~isKey(D.P, new_key)), D.P(new_key) = 0; end
-            new_key = state_conversion([og_state(1) + 1, og_state(2) - 1, og_state(3)]); if(~isKey(D.P, new_key)), D.P(new_key) = 0; end        
-            new_key = state_conversion([og_state(1) - 1, og_state(2) + 1, og_state(3)]); if(~isKey(D.P, new_key)), D.P(new_key) = 0; end   
-            new_key = state_conversion([og_state(1) - 1, og_state(2) - 1, og_state(3)]); if(~isKey(D.P, new_key)), D.P(new_key) = 0; end
-            new_key = state_conversion([og_state(1) + 1, og_state(2), og_state(3) + 1]); if(~isKey(D.P, new_key)), D.P(new_key) = 0; end
-            new_key = state_conversion([og_state(1) + 1, og_state(2), og_state(3) - 1]); if(~isKey(D.P, new_key)), D.P(new_key) = 0; end
-            new_key = state_conversion([og_state(1) - 1, og_state(2), og_state(3) + 1]); if(~isKey(D.P, new_key)), D.P(new_key) = 0; end
-            new_key = state_conversion([og_state(1) - 1, og_state(2), og_state(3) - 1]); if(~isKey(D.P, new_key)), D.P(new_key) = 0; end
-            new_key = state_conversion([og_state(1), og_state(2) + 1, og_state(3) + 1]); if(~isKey(D.P, new_key)), D.P(new_key) = 0; end
-            new_key = state_conversion([og_state(1), og_state(2) + 1, og_state(3) - 1]); if(~isKey(D.P, new_key)), D.P(new_key) = 0; end
-            new_key = state_conversion([og_state(1), og_state(2) - 1, og_state(3) + 1]); if(~isKey(D.P, new_key)), D.P(new_key) = 0; end
-            new_key = state_conversion([og_state(1), og_state(2) - 1, og_state(3) - 1]); if(~isKey(D.P, new_key)), D.P(new_key) = 0; end
+            tic; new_key = state_conversion([og_state(1) + 1, og_state(2) + 1, og_state(3)]); state_conv_t = state_conv_t + toc; tic; if(~isKey(D.P, new_key)), D.P(new_key) = 0; key_check_t = key_check_t + toc; end
+            tic; new_key = state_conversion([og_state(1) + 1, og_state(2) - 1, og_state(3)]); state_conv_t = state_conv_t + toc; tic; if(~isKey(D.P, new_key)), D.P(new_key) = 0; key_check_t = key_check_t + toc; end       
+            tic; new_key = state_conversion([og_state(1) - 1, og_state(2) + 1, og_state(3)]); state_conv_t = state_conv_t + toc; tic; if(~isKey(D.P, new_key)), D.P(new_key) = 0; key_check_t = key_check_t + toc; end
+            tic; new_key = state_conversion([og_state(1) - 1, og_state(2) - 1, og_state(3)]); state_conv_t = state_conv_t + toc; tic; if(~isKey(D.P, new_key)), D.P(new_key) = 0; key_check_t = key_check_t + toc; end
+            tic; new_key = state_conversion([og_state(1) + 1, og_state(2), og_state(3) + 1]); state_conv_t = state_conv_t + toc; tic; if(~isKey(D.P, new_key)), D.P(new_key) = 0; key_check_t = key_check_t + toc; end
+            tic; new_key = state_conversion([og_state(1) + 1, og_state(2), og_state(3) - 1]); state_conv_t = state_conv_t + toc; tic; if(~isKey(D.P, new_key)), D.P(new_key) = 0; key_check_t = key_check_t + toc; end
+            tic; new_key = state_conversion([og_state(1) - 1, og_state(2), og_state(3) + 1]); state_conv_t = state_conv_t + toc; tic; if(~isKey(D.P, new_key)), D.P(new_key) = 0; key_check_t = key_check_t + toc; end
+            tic; new_key = state_conversion([og_state(1) - 1, og_state(2), og_state(3) - 1]); state_conv_t = state_conv_t + toc; tic; if(~isKey(D.P, new_key)), D.P(new_key) = 0; key_check_t = key_check_t + toc; end
+            tic; new_key = state_conversion([og_state(1), og_state(2) + 1, og_state(3) + 1]); state_conv_t = state_conv_t + toc; tic; if(~isKey(D.P, new_key)), D.P(new_key) = 0; key_check_t = key_check_t + toc; end
+            tic; new_key = state_conversion([og_state(1), og_state(2) + 1, og_state(3) - 1]); state_conv_t = state_conv_t + toc; tic; if(~isKey(D.P, new_key)), D.P(new_key) = 0; key_check_t = key_check_t + toc; end
+            tic; new_key = state_conversion([og_state(1), og_state(2) - 1, og_state(3) + 1]); state_conv_t = state_conv_t + toc; tic; if(~isKey(D.P, new_key)), D.P(new_key) = 0; key_check_t = key_check_t + toc; end
+            tic; new_key = state_conversion([og_state(1), og_state(2) - 1, og_state(3) - 1]); state_conv_t = state_conv_t + toc; tic; if(~isKey(D.P, new_key)), D.P(new_key) = 0; key_check_t = key_check_t + toc; end
             
             %   Corners (8)
-            new_key = state_conversion([og_state(1) + 1, og_state(2) + 1, og_state(3) + 1]); if(~isKey(D.P, new_key)), D.P(new_key) = 0; end
-            new_key = state_conversion([og_state(1) + 1, og_state(2) + 1, og_state(3) - 1]); if(~isKey(D.P, new_key)), D.P(new_key) = 0; end
-            new_key = state_conversion([og_state(1) + 1, og_state(2) - 1, og_state(3) + 1]); if(~isKey(D.P, new_key)), D.P(new_key) = 0; end
-            new_key = state_conversion([og_state(1) - 1, og_state(2) + 1, og_state(3) + 1]); if(~isKey(D.P, new_key)), D.P(new_key) = 0; end
-            new_key = state_conversion([og_state(1) + 1, og_state(2) - 1, og_state(3) - 1]); if(~isKey(D.P, new_key)), D.P(new_key) = 0; end
-            new_key = state_conversion([og_state(1) - 1, og_state(2) - 1, og_state(3) + 1]); if(~isKey(D.P, new_key)), D.P(new_key) = 0; end
-            new_key = state_conversion([og_state(1) - 1, og_state(2) + 1, og_state(3) - 1]); if(~isKey(D.P, new_key)), D.P(new_key) = 0; end
-            new_key = state_conversion([og_state(1) - 1, og_state(2) - 1, og_state(3) - 1]); if(~isKey(D.P, new_key)), D.P(new_key) = 0; end
+            tic; new_key = state_conversion([og_state(1) + 1, og_state(2) + 1, og_state(3) + 1]); state_conv_t = state_conv_t + toc; tic; if(~isKey(D.P, new_key)), D.P(new_key) = 0; key_check_t = key_check_t + toc; end
+            tic; new_key = state_conversion([og_state(1) + 1, og_state(2) + 1, og_state(3) - 1]); state_conv_t = state_conv_t + toc; tic; if(~isKey(D.P, new_key)), D.P(new_key) = 0; key_check_t = key_check_t + toc; end
+            tic; new_key = state_conversion([og_state(1) + 1, og_state(2) - 1, og_state(3) + 1]); state_conv_t = state_conv_t + toc; tic; if(~isKey(D.P, new_key)), D.P(new_key) = 0; key_check_t = key_check_t + toc; end
+            tic; new_key = state_conversion([og_state(1) - 1, og_state(2) + 1, og_state(3) + 1]); state_conv_t = state_conv_t + toc; tic; if(~isKey(D.P, new_key)), D.P(new_key) = 0; key_check_t = key_check_t + toc; end
+            tic; new_key = state_conversion([og_state(1) + 1, og_state(2) - 1, og_state(3) - 1]); state_conv_t = state_conv_t + toc; tic; if(~isKey(D.P, new_key)), D.P(new_key) = 0; key_check_t = key_check_t + toc; end
+            tic; new_key = state_conversion([og_state(1) - 1, og_state(2) - 1, og_state(3) + 1]); state_conv_t = state_conv_t + toc; tic; if(~isKey(D.P, new_key)), D.P(new_key) = 0; key_check_t = key_check_t + toc; end
+            tic; new_key = state_conversion([og_state(1) - 1, og_state(2) + 1, og_state(3) - 1]); state_conv_t = state_conv_t + toc; tic; if(~isKey(D.P, new_key)), D.P(new_key) = 0; key_check_t = key_check_t + toc; end
+            tic; new_key = state_conversion([og_state(1) - 1, og_state(2) - 1, og_state(3) - 1]); state_conv_t = state_conv_t + toc; tic; if(~isKey(D.P, new_key)), D.P(new_key) = 0; key_check_t = key_check_t + toc; end
         end
     end
+    D.state_conv_t = state_conv_t; D.key_conv_t = key_conv_t; D.key_check_t = key_check_t;
+    D.neighbors_t =  state_conv_t + key_conv_t + key_check_t;
+
     D.n = numEntries(D.P); D.keys = keys(D.P); D.values = values(D.P);
-    D = Initialize_vuw(D,G,D.m+1); 
+    tic; D = Initialize_vuw(D,G,D.m+1); D.vuw_t = toc;
+    tic;
     for l=2:D.m                     % Remove Small Elements
         if(D.values(l) < G.thresh)&&(no_neighbors(D,G,l))
             D.P(D.keys(l)) = []; D.v(D.keys(l)) = []; D.u(D.keys(l)) = []; D.w(D.keys(l)) = [];
         end
     end
+    D.remove_t = toc;
+    tic;
     D.n = numEntries(D.P); D.keys = keys(D.P);    
     D.P(D.keys) = max(D.P(D.keys), 0); D.values = values(D.P); 
     prob_sum = sum(values(D.P)); D.P(D.keys) = D.values./prob_sum; D.values = values(D.P);
+    D.fix_prob_t = toc;
+    D.mod_t = D.neighbors_t + D.vuw_t + D.remove_t + D.fix_prob_t;
 end                                                                                                               
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function Rotate_Plot(D,G,ys)                      
-    N=round(2*G.L/G.dx)+1; M=(N-1)/2+1; Pfull=zeros(N,N,N); D.n = numEntries(D.P); D.keys = keys(D.P); D.values = values(D.P);
-    for l=2:D.n, state = key_conversion(D.keys(l)); i = state(1)+M; j = state(2)+M; k = state(3)+M;
-        if i>0 && i<=N && j>0 && j<=N && k>0 && k<=N, Pfull(j,i,k)=D.values(l); end, end
-    figure(1)
-    isosurface(-G.L:G.dx:G.L,-G.L:G.dx:G.L,-G.L:G.dx:G.L,Pfull,0.005); 
-    isosurface(-G.L:G.dx:G.L,-G.L:G.dx:G.L,-G.L:G.dx:G.L,Pfull,0.0007); 
-    isosurface(-G.L:G.dx:G.L,-G.L:G.dx:G.L,-G.L:G.dx:G.L,Pfull,0.0001); alpha(.5),
-    colormap(cool); axis([-G.L G.L -G.L G.L -G.L G.L]);
-    plot3(ys(1,:),ys(2,:),ys(3,:),'k-','linewidth',2);
-    plot3(ys(1,end),ys(2,end),ys(3,end),'k*','linewidth',2); 
-    axis equal; axis([-15 15 -25 25 -30 20]); drawnow;
-    
-    figure(2)
-    isosurface(-G.L:G.dx:G.L,-G.L:G.dx:G.L,-G.L:G.dx:G.L,Pfull,0.0001); alpha(.5),
-    colormap(cool); axis([-G.L G.L -G.L G.L -G.L G.L]);
-    plot3(ys(1,:),ys(2,:),ys(3,:),'k-','linewidth',2);
-    plot3(ys(1,end),ys(2,end),ys(3,end),'k*','linewidth',2);
-    axis equal; axis([-15 15 -25 25 -30 20]); drawnow;
-end
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function [K]=RHS_P(D,G)
+function [K,D]=RHS_P(D,G)
     D.n = numEntries(D.P); D.keys = keys(D.P); D.values = values(D.P); K(1:D.n,1)=0; 
     D.f(D.keys) = {zeros(1,G.d)};
+
+    tic;
     for l=2:D.n
         l_key = D.keys(l); l_state = key_conversion(l_key);
         f_l = D.f(l_key); f_l = f_l{1}; u_l = D.u(l_key); u_l = u_l{1}; w_l = D.w(l_key); w_l = w_l{1};  
@@ -203,7 +230,9 @@ function [K]=RHS_P(D,G)
         end
         D.f(l_key) = {f_l};
     end
+    D.initial_f_t = toc;
 
+    tic;
     for d=1:G.d
         for l=2:D.n
             l_key = D.keys(l); l_state = key_conversion(l_key);
@@ -247,7 +276,9 @@ function [K]=RHS_P(D,G)
             end
         end
     end
+    D.total_f_t = toc;
     
+    tic;
     for l=2:D.n
         l_key = D.keys(l); l_state = key_conversion(l_key);
         f_l = D.f(l_key); f_l = f_l{1};
@@ -258,6 +289,8 @@ function [K]=RHS_P(D,G)
             K(l,1)=K(l,1)-(f_l(d)-f_i(d))/G.dx;
         end
     end
+    D.K_t = toc;
+    D.rhs_t = D.initial_f_t + D.total_f_t + D.K_t;
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function [phi]=MC(th), phi=max(0,min([(1+th)/2 2 2*th]));   end   % Flux limiters

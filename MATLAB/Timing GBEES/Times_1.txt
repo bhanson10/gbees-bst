@@ -22,6 +22,8 @@ HGBEES_1 Steps
 	-Removing empties: 0.04733
 	-Updating probability: 0.012333
 
+%%%%%%%%%%%%%%%%%%%%%%% TIME-MARCHING  %%%%%%%%%%%%%%%%%%%%%%%
+
 -Second Modify pointset: 2.0231 (45%)
 	-Initialize Variables: 0.0029659
 	-Check/Create Neighbors: 1.0617 (52%)
