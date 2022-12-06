@@ -1,59 +1,79 @@
-function D = gbees                                   % GBEES code base 
 %%%%%%%%%%%%%%%%% begin user input %%%%%%%%%%%%%%%% 
 T=1; G.thresh=0.00002; G.max=10000; start=[-11.5; -10; 9.5]; 
 G.dt=.0005; dt=.005; G.dx=0.4; G.d=3; G.sigma=4; G.b=1; G.r=48; G.L=30;
 %%%%%%%%%%%%%%%% end of user input %%%%%%%%%%%%%j%% 
 G.Y=eye(G.d,'int16'); [D]=Initialize_D(G); h1=round(G.dx/G.dt); 
 
-figure(1); clf; y=start; ys=y; 
-for timestep=1:10000
-  k1=RHS(y,G); k2=RHS(y+(dt/2)*k1,G); k3=RHS(y+(dt/2)*k2,G); k4=RHS(y+dt*k3,G);    
-  ynew=y+(dt/6)*k1+(dt/3)*(k2+k3)+(dt/6)*k4; ys=[ys ynew]; y=ynew;
+t=0; [D]=Modify_pointset(D,G); 
+
+%ALL Plots 
+size = [];
+
+%Plot 1
+total_time = []; mod_time = []; rhs_time = [];  
+
+%Plot 2
+neighbors_time = []; remove_time = []; norm_time = []; other_time = [];
+
+%Plot 3
+initial_flux_time = []; total_flux_time = []; K_time = [];
+%for timestep=1:T/G.dt
+for timestep=1:25,t=t+G.dt;  disp("Timestep: " + string(timestep));if mod(timestep,1)==0, [D]=Modify_pointset(D,G); mod_t = D.mod_t; end
+    [K,D]=RHS_P(D,D.P(1:D.n),G); D.P(2:D.n,1)=D.P(2:D.n)+G.dt*K(2:D.n); rhs_t = D.rhs_t;  
+    
+    %Plot 1
+    total_t = mod_t + rhs_t;
+    total_time = [total_time total_t];
+    mod_time = [mod_time mod_t];
+    rhs_time = [rhs_time rhs_t];
+    size = [size D.n-1];
+    
+    %Plot 2
+    neighbors_time = [neighbors_time D.neighbors_t];
+    remove_time = [remove_time D.remove_t];
+    norm_time = [norm_time D.fix_prob_t];
+    other_time = [other_time D.other_t];
+    
+    %Plot 3
+    initial_flux_time = [initial_flux_time D.initial_f_t];
+    total_flux_time = [total_flux_time D.total_f_t];
+    K_time = [K_time D.K_t];
 end
-plot3(ys(1,:),ys(2,:),ys(3,:),'g-','linewidth',1); view(-109,14);  hold on;
-lighting phong; light('Position',[-1 0 0]); drawnow;
 
-figure(2); clf; y=start; ys=y; 
-for timestep=1:T/dt
-  k1=RHS(y,G); k2=RHS(y+(dt/2)*k1,G); k3=RHS(y+(dt/2)*k2,G); k4=RHS(y+dt*k3,G);    
-  ynew=y+(dt/6)*k1+(dt/3)*(k2+k3)+(dt/6)*k4; ys=[ys ynew]; y=ynew;
-end
-plot3(ys(1,:),ys(2,:),ys(3,:),'k-','linewidth',2); view(-109,14);  hold on;
-plot3(ys(1,1),ys(2,1),ys(3,1),'k*'),plot3(ys(1,end),ys(2,end),ys(3,end),'k*');
-lighting phong; light('Position',[-1 0 0]); drawnow;
+figure(1); clf; hold on
+scatter(size, total_time, 'k', 'filled', 'DisplayName', 'Total Time');
+scatter(size, mod_time, 'b', 'filled', 'DisplayName', 'Modify Pointset');
+scatter(size, rhs_time, 'r', 'filled', 'DisplayName', 'RHS');
+title('Contribution to Total Timestep, GBEES', 'Interpreter','Latex', 'FontSize', 14);
+lgd = legend;
+lgd.Location = "best";
+lgd.FontSize = 10;
+xlabel('Size of Dictionary', 'Interpreter', 'Latex', 'FontSize', 10)
+ylabel('time of substep (s)', 'Interpreter', 'Latex', 'FontSize', 10)
 
-for P=1:200; y=start+0.5*randn(3,1); ys=y;
-  for timestep=1:T/dt
-    k1=RHS(y,G); k2=RHS(y+(dt/2)*k1,G); k3=RHS(y+(dt/2)*k2,G); k4=RHS(y+dt*k3,G);    
-    ynew=y+(dt/6)*k1+(dt/3)*(k2+k3)+(dt/6)*k4; ys=[ys ynew]; y=ynew;
-  end
-  plot3(ys(1,:),ys(2,:),ys(3,:),'c-.','linewidth',0.3); 
-  plot3(ys(1,1),ys(2,1),ys(3,1),'k+'), plot3(ys(1,end),ys(2,end),ys(3,end),'k+');
-  plot3(ys(1,41),ys(2,41),ys(3,41),'k+'); plot3(ys(1,81),ys(2,81),ys(3,81),'k+');
-  plot3(ys(1,121),ys(2,121),ys(3,121),'k+'); plot3(ys(1,161),ys(2,161),ys(3,161),'k+');
-  drawnow;
-end
+figure(2); clf; hold on
+scatter(size, neighbors_time, 'k', 'filled', 'DisplayName', 'Check/Create Neighbors');
+scatter(size, remove_time, 'b', 'filled', 'DisplayName', 'Remove Small Entries');
+scatter(size, norm_time, 'r', 'filled', 'DisplayName', 'Normalize P');
+scatter(size, other_time, 'g', 'filled', 'DisplayName', 'Misc.');
+title('Contribution to Modify Pointset, GBEES', 'Interpreter','Latex', 'FontSize', 14);
+lgd = legend;
+lgd.Location = "best";
+lgd.FontSize = 10;
+xlabel('Size of Dictionary', 'Interpreter', 'Latex', 'FontSize', 10)
+ylabel('time of substep (s)', 'Interpreter', 'Latex', 'FontSize', 10)
 
-y=start; ys=y; t=0; [D]=Modify_pointset(D,G); Rotate_Plot(D,G,ys);
+figure(3); clf; hold on
+scatter(size, initial_flux_time, 'k', 'filled', 'DisplayName', 'Initial Flux');
+scatter(size, total_flux_time, 'b', 'filled', 'DisplayName', 'Total flux');
+scatter(size, K_time, 'r', 'filled', 'DisplayName', 'K');
+title('Contribution to RHS, GBEES', 'Interpreter','Latex', 'FontSize', 14);
+lgd = legend;
+lgd.Location = "best";
+lgd.FontSize = 10;
+xlabel('Size of Dictionary', 'Interpreter', 'Latex', 'FontSize', 10)
+ylabel('time of substep (s)', 'Interpreter', 'Latex', 'FontSize', 10)
 
-for timestep=1:T/G.dt,t=t+G.dt;  disp("Timestep: " + string(timestep));if mod(timestep,1)==0, [D]=Modify_pointset(D,G); end
-  K=RHS_P(D,D.P(1:D.n),G); D.P(2:D.n,1)=D.P(2:D.n)+G.dt*K(2:D.n);                
-  
-  k1=RHS(y,G); k2=RHS(y+(G.dt/2)*k1,G); k3=RHS(y+(G.dt/2)*k2,G); k4=RHS(y+G.dt*k3,G);    
-  ynew=y+(G.dt/6)*k1+(G.dt/3)*(k2+k3)+(G.dt/6)*k4; ys=[ys ynew]; y=ynew;
-  
-  if mod(timestep,400)==0, Rotate_Plot(D,G,ys),  end
-end, Rotate_Plot(D,G,ys),
-
-figure(1);
-view(-109,14); print -depsc2 -opengl -r600 pdfA.v1.eps
-view(-31,2);   print -depsc2 -opengl -r600 pdfA.v2.eps
-
-figure(2);
-view(-109,14); print -depsc2 -opengl -r600 trajA.v1.eps
-view(-31,2);   print -depsc2 -opengl -r600 trajA.v2.eps
-
-end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %                                     FUNCTIONS
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -96,30 +116,9 @@ for l=D.n:-1:b,                                         % Search list for neighb
 end
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function Rotate_Plot(D,G,ys)                         % check_connections(D,G)
-N=round(2*G.L/G.dx)+1; M=(N-1)/2+1; Pfull=zeros(N,N,N);
-for l=2:D.n, i=D.j(l,1)+M; j=D.j(l,2)+M; k=D.j(l,3)+M;
-  if i>0 & i<=N & j>0 & j<=N & k>0 & k<=N, Pfull(j,i,k)=D.P(l); end, end
-figure(1)
-isosurface([-G.L:G.dx:G.L],[-G.L:G.dx:G.L],[-G.L:G.dx:G.L],Pfull,0.005); 
-isosurface([-G.L:G.dx:G.L],[-G.L:G.dx:G.L],[-G.L:G.dx:G.L],Pfull,0.0007); 
-isosurface([-G.L:G.dx:G.L],[-G.L:G.dx:G.L],[-G.L:G.dx:G.L],Pfull,0.0001); alpha(.5),
-colormap(cool); axis([-G.L G.L -G.L G.L -G.L G.L]);
-plot3(ys(1,:),ys(2,:),ys(3,:),'k-','linewidth',2);
-plot3(ys(1,end),ys(2,end),ys(3,end),'k*','linewidth',2); 
-axis equal; axis([-15 15 -25 25 -30 20]); drawnow;
-
-figure(2)
-isosurface([-G.L:G.dx:G.L],[-G.L:G.dx:G.L],[-G.L:G.dx:G.L],Pfull,0.0001); alpha(.5),
-colormap(cool); axis([-G.L G.L -G.L G.L -G.L G.L]);
-plot3(ys(1,:),ys(2,:),ys(3,:),'k-','linewidth',2);
-plot3(ys(1,end),ys(2,end),ys(3,end),'k*','linewidth',2);
-axis equal; axis([-15 15 -25 25 -30 20]); drawnow;
-end
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function [D]=Modify_pointset(D,G)               % Shift dataset to relevant gridpoints.
 D.m=D.n; l=D.m;
-
+tic;
 while D.P(l)<G.thresh; l=l-1; D.m=D.m-1; end, l=l-1;  % Find last big element.
 while l>1, if D.P(l)<G.thresh,     % We now move all big elements to the range 2:D.m,
   for d=1:G.d;                     % and small elements to the range D.m+1:D.n.
@@ -139,7 +138,9 @@ while l>1, if D.P(l)<G.thresh,     % We now move all big elements to the range 2
   [D.u(l,:),D.u(D.m,:)]=Swap(D.u(l,:),D.u(D.m,:));
   [D.w(l,:),D.w(D.m,:)]=Swap(D.w(l,:),D.w(D.m,:));
   D.m=D.m-1;
-end, l=l-1; end   
+end, l=l-1; end 
+D.other_t = toc;
+tic;
 D.f(D.m+1:D.n,1)=zeros(D.n-D.m,1);  % Next, identify the neighbors to the big elements,
 for l=2:D.m, for d=1:G.d            % and create entries for them if necessary.
   if D.i(l,d)==1, D=Create(D,G,D.j(l,:)-G.Y(d,:)); else, D.f(D.i(l,d),1)=1; end
@@ -155,7 +156,8 @@ for l=2:D.m, for d=1:G.d            % and create entries for them if necessary.
 	  else, D.f(D.k(D.k(l,e),d),1)=1; end
   end
 end, end  
-
+D.neighbors_t = toc;
+tic;
 l=D.m+1; while l<=D.n, if D.f(l,1)~=1,   % Remove small elements which do not neighbor
   for d=1:G.d;                           % the big elements.  First, fix pointers...
     D.i(D.k(l,d),d)=1; if l<D.n, D.i(D.k(D.n,d),d)=l; end
@@ -167,8 +169,12 @@ l=D.m+1; while l<=D.n, if D.f(l,1)~=1,   % Remove small elements which do not ne
   D.u(l,:)=D.u(D.n,:); D.w(l,:)=D.w(D.n,:); D.f(l,1)=D.f(D.n,1); % l with element D.n.
   D.n=D.n-1;
 else, l=l+1; end, end
+D.remove_t = toc;
+tic;
 for l=2:D.n, D.P(l)=max(D.P(l),0); end, D.P(1)=0; D.i(1,1:G.d)=1; D.k(1,1:G.d)=1;
 D.P(1:D.n,1)=D.P(1:D.n,1)/sum(D.P(1:D.m,1));
+D.fix_prob_t = toc;
+D.mod_t = D.neighbors_t+D.other_t + D.remove_t + D.fix_prob_t;
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function [b,a]=Swap(a,b); end  % Swap two elements
@@ -177,14 +183,17 @@ function [D]=Create(D,G,j);  % Create a new element in D
 D.n=D.n+1; D.P(D.n)=0;  D.j(D.n,:)=j; [D]=Initialize_vuwik(D,G,D.n); D.f(D.n,1)=1;
 end  
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function [K]=RHS_P(D,P,G)
+function [K,D]=RHS_P(D,P,G)
 D.f(1:D.n,1:G.d)=0; P(1)=0; K(1:D.n,1)=0;
 % -------------------------------- NONCONSERVATIVE FORM -------------------------------
 % for l=2:D.n, for d=1:G.d, K(l,1)=K(l,1)-D.w(D.i(l,d),d)*(P(l)-P(D.i(l,d)))/G.dx ...
 %							             -D.u(l,d)*(P(D.k(l,d))-P(l))/G.dx;    end, end
-% --------------------------------- CONSERVATIVE FORM ---------------------------------                                         
+% --------------------------------- CONSERVATIVE FORM ---------------------------------       
+tic; 
 for l=2:D.n, for d=1:G.d, D.f(l,d)=D.w(l,d)*P(l)+D.u(l,d)*P(D.k(l,d)); end, end
-%------------------------- (keep one of the above 2 sections) -------------------------
+D.initial_f_t = toc;
+%------------------------- (keep one of the above 2 sections) -------------------------\
+tic;
 for d=1:G.d, for l=2:D.n, i=D.i(l,d); if l<=D.m | (i>1 & i<=D.m),
   F=G.dt*(P(l)-P(i))/(2*G.dx);      
   for e=1:G.d, if e~=d,
@@ -197,14 +206,13 @@ for d=1:G.d, for l=2:D.n, i=D.i(l,d); if l<=D.m | (i>1 & i<=D.m),
   else,          th=(P(D.k(l,d))-P(l))/(P(l)-P(i)); end,       % correction flux term.
   t=abs(D.v(i,d)); D.f(i,d)=D.f(i,d)+t*(G.dx/G.dt-t)*F*MC(th); % Flux: use MC or VL.
 end, end, end
+D.total_f_t = toc;
+tic;
 for l=2:D.n, for d=1:G.d, K(l,1)=K(l,1)-(D.f(l,d)-D.f(D.i(l,d),d))/G.dx; end, end
+D.K_t = toc;
+D.rhs_t = D.initial_f_t + D.total_f_t + D.K_t;
 end % function RHS_P
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function [phi]=MC(th), phi=max(0,min([(1+th)/2 2 2*th]));   end         % Flux limiters
 function [phi]=VL(th), phi=min((th+abs(th))/(1+abs(th)),0); end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function check_connections(D,G)
-for l=2:D.n, for d=1:G.d
-  if D.i(l,d)>1, if D.j(D.i(l,d),:)+G.Y(d,:)~=D.j(l,:), disp 'prob!', pause, end, end
-  if D.k(l,d)>1, if D.j(D.k(l,d),:)-G.Y(d,:)~=D.j(l,:), disp 'prob!', pause, end, end
-end, end, disp 'checked', end

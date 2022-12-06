@@ -10,7 +10,7 @@ y=G.start; ys=y; t=0; [hD]=Modify_pointset(hD,G);
 size = [];
 
 %Plot 1
-mod_time = []; rhs_time = [];  
+total_time = []; mod_time = []; rhs_time = [];  
 
 %Plot 2
 neighbors_time = []; vuw_time = []; remove_time = []; norm_time = [];
@@ -26,6 +26,7 @@ for timestep=1:T/G.dt, disp("Timestep: " + string(timestep)); t=t+G.dt; if mod(t
     
     %Plot 1
     total_t = mod_t + rhs_t;
+    total_time = [total_time total_t];
     mod_time = [mod_time mod_t];
     rhs_time = [rhs_time rhs_t];
     size = [size length(hD.keys)];
@@ -49,8 +50,9 @@ for timestep=1:T/G.dt, disp("Timestep: " + string(timestep)); t=t+G.dt; if mod(t
 end
 
 figure(1); clf; hold on
-scatter(size, mod_time, 'k', 'filled', 'DisplayName', 'Modify Pointset');
-scatter(size, rhs_time, 'b', 'filled', 'DisplayName', 'RHS');
+scatter(size, total_time, 'k', 'filled', 'DisplayName', 'Total Time');
+scatter(size, mod_time, 'b', 'filled', 'DisplayName', 'Modify Pointset');
+scatter(size, rhs_time, 'r', 'filled', 'DisplayName', 'RHS');
 title('Contribution to Total Timestep, HGBEES2', 'Interpreter','Latex', 'FontSize', 14);
 lgd = legend;
 lgd.Location = "best";

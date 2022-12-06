@@ -1,7 +1,8 @@
-function hgbees_1
+function hD = hgbees_1
 %%%%%%%%%%%%%%%%% begin user input %%%%%%%%%%%%%%%% 
 T=1; G.thresh=0.00002; G.start=[-11.5; -10; 9.5];
 G.dt=.0005; dt=.005; G.dx=0.4; G.d=3; G.sigma=4; G.b=1; G.r=48; G.L=30;
+G.N_bits = 8; G.N_data = G.d; G.fac=uint64(2^G.N_bits); G.offset32=int32(G.fac/2); G.offset64=int64(G.offset32);
 %%%%%%%%%%%%%%%% end of user input %%%%%%%%%%%%%%%% 
 G.Y = eye(G.d,'int16'); [hD] = Initialize_D(G); 
 
@@ -34,13 +35,13 @@ for P=1:200; y=G.start+0.5*randn(3,1); ys=y;
   drawnow;
 end
 
-y=G.start; ys=y; t=0; [hD]=Modify_pointset(hD,G); Rotate_Plot(hD,G,ys);
+y=G.start; ys=y; t=0; [hD]=Modify_pointset(hD,G); Rotate_Plot(hD,G,ys); 
 
-for timestep=1:T/G.dt, disp("Timestep: "); disp(timestep); t=t+G.dt; if mod(timestep,1)==0, tic; [hD]=Modify_pointset(hD,G); disp("Modify: " + string(toc)); end
-  tic; K=RHS_P(hD,G); hD.keys = keys(hD.P); hD.P(hD.keys) = hD.P(hD.keys) + G.dt.*K;
+for timestep=1:T/G.dt, disp("Timestep: " + string(timestep)); t=t+G.dt; if mod(timestep,1)==0, [hD]=Modify_pointset(hD,G); end
+  K=RHS_P(hD,G); hD.keys = keys(hD.P); hD.P(hD.keys) = hD.P(hD.keys) + G.dt.*K;
   k1=RHS(y,G); k2=RHS(y+(G.dt/2)*k1,G); k3=RHS(y+(G.dt/2)*k2,G); k4=RHS(y+G.dt*k3,G);    
-  ynew=y+(G.dt/6)*k1+(G.dt/3)*(k2+k3)+(G.dt/6)*k4; ys=[ys ynew]; y=ynew; disp("Time-marching: " + string(toc));
-  if mod(timestep,400)==0, Rotate_Plot(hD,G,ys),  end
+  ynew=y+(G.dt/6)*k1+(G.dt/3)*(k2+k3)+(G.dt/6)*k4; ys=[ys ynew]; y=ynew; 
+  if mod(timestep,25)==0, Rotate_Plot(hD,G,ys),  end
 end, Rotate_Plot(hD,G,ys),
 
 %{
@@ -56,14 +57,14 @@ view(-31,2);   print -depsc2 -image -r600 trajA.v2.eps
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function [D] = Initialize_D(G)
-    D.P = dictionary(); D.P("0") = 0;
-    D.v = dictionary(); D.v("0") = {zeros(1,G.d)};
+    D.P = dictionary(); D.P(uint64(0)) = 0;
+    D.v = dictionary(); D.v(uint64(0)) = {zeros(1,G.d)};
     D.u = D.v; D.w = D.v; D.f = D.v;
    
     for i=round((G.start(1)-2)/G.dx):round((G.start(1)+2)/G.dx)
         for j=round((G.start(2)-2)/G.dx):round((G.start(2)+2)/G.dx)
             for k=round((G.start(3)-2)/G.dx):round((G.start(3)+2)/G.dx)
-                state = [i j k]; key = state_conversion(state);
+                state = [i j k]; key = state_conversion(state,G);
                 x=(i*G.dx - G.start(1))^2+(j*G.dx - G.start(2))^2+(k*G.dx - G.start(3))^2;
                 D.P(key) = exp(-4.*x/2.); 
             end
@@ -75,8 +76,8 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function [D]=Initialize_vuw(D,G,b)
     for l=b:D.n
-        current_key = D.keys(l);
-        x=G.dx.*(key_conversion(current_key)); xh=G.dx/2;
+        current_key = D.keys(l); current_state = double(key_conversion(current_key,G));
+        x=G.dx.*current_state; xh=G.dx/2;
         v1=G.sigma*(x(2)-(x(1)+xh)); v2=-(x(2)+xh)-x(1)*x(3); v3=-G.b*(x(3)+xh)+x(1)*x(2)-G.b*G.r; 
         D.v(current_key) = {[v1 v2 v3]};
         D.u(current_key)={[min(v1, 0) min(v2, 0) min(v3, 0)]};
@@ -88,73 +89,57 @@ function f=RHS(y,G)
     f=[G.sigma*(y(2)-y(1));  -y(2)-y(1)*y(3);  -G.b*y(3)+y(1)*y(2)-G.b*G.r];
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function key = state_conversion(state)
-    i = dec2bin(state(1),8);
-    j = dec2bin(state(2),8);
-    k = dec2bin(state(3),8);
-    key = strcat(i,j,k);
+function key = state_conversion(state,G)
+    state = int32(state); state = uint64(state + G.offset32);
+    key=uint64(0);
+    for i=1:G.N_data; key=key+state(i)*G.fac^(i-1); end
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function state = key_conversion(input_key)
-    input_key = convertStringsToChars(input_key);
-    length = 8;
-    bin_i = input_key(1:8); bin_j = input_key(9:16); bin_k = input_key(17:24);
-    i = twos2dec(bin_i, length); j = twos2dec(bin_j, length); k = twos2dec(bin_k, length);
-    state = [i j k];
-end
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function decimal = twos2dec(x,bits)
-    if (x(1) == '0')
-        decimal = bin2dec(x);
-    else
-        for i=1:bits
-            if(x(i) == '0') 
-                x(i) = '1';
-            elseif(x(i) == '1')
-                x(i) = '0';
-            end
-        end
-        decimal = -bin2dec(dec2bin(bin2dec(x) + bin2dec('1')));
+function state = key_conversion(key,G)
+    for i=G.N_data:-1:1
+        state(i)=idivide(key,G.fac^(i-1),'floor');
+        key=key-state(i)*G.fac^(i-1);
     end
+    state=int64(state)-G.offset64;
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function [D] = Modify_pointset(D,G) 
     D.keys = keys(D.P); D.m = numEntries(D.P);
     for l=2:D.m    % Check/Create Neighbors of Big Cells
         if(D.P(D.keys(l))>=G.thresh)
-            og_state = key_conversion(D.keys(l));
+            og_state = key_conversion(D.keys(l),G);
     
             %   Faces (6)
-            new_key = state_conversion([og_state(1) + 1, og_state(2), og_state(3)]); if(~isKey(D.P, new_key)), D.P(new_key) = 0; end
-            new_key = state_conversion([og_state(1) - 1, og_state(2), og_state(3)]); if(~isKey(D.P, new_key)), D.P(new_key) = 0; end
-            new_key = state_conversion([og_state(1), og_state(2) + 1, og_state(3)]); if(~isKey(D.P, new_key)), D.P(new_key) = 0; end
-            new_key = state_conversion([og_state(1), og_state(2) - 1, og_state(3)]); if(~isKey(D.P, new_key)), D.P(new_key) = 0; end        
-            new_key = state_conversion([og_state(1), og_state(2), og_state(3) + 1]); if(~isKey(D.P, new_key)), D.P(new_key) = 0; end        
-            new_key = state_conversion([og_state(1), og_state(2), og_state(3) - 1]); if(~isKey(D.P, new_key)), D.P(new_key) = 0; end        
+            new_key = state_conversion([og_state(1) + 1, og_state(2), og_state(3)],G); if(~isKey(D.P, new_key)), D.P(new_key) = 0; end
+            new_key = state_conversion([og_state(1) - 1, og_state(2), og_state(3)],G); if(~isKey(D.P, new_key)), D.P(new_key) = 0; end
+            new_key = state_conversion([og_state(1), og_state(2) + 1, og_state(3)],G); if(~isKey(D.P, new_key)), D.P(new_key) = 0; end
+            new_key = state_conversion([og_state(1), og_state(2) - 1, og_state(3)],G); if(~isKey(D.P, new_key)), D.P(new_key) = 0; end        
+            new_key = state_conversion([og_state(1), og_state(2), og_state(3) + 1],G); if(~isKey(D.P, new_key)), D.P(new_key) = 0; end        
+            new_key = state_conversion([og_state(1), og_state(2), og_state(3) - 1],G); if(~isKey(D.P, new_key)), D.P(new_key) = 0; end        
     
             %   Edges (12)
-            new_key = state_conversion([og_state(1) + 1, og_state(2) + 1, og_state(3)]); if(~isKey(D.P, new_key)), D.P(new_key) = 0; end
-            new_key = state_conversion([og_state(1) + 1, og_state(2) - 1, og_state(3)]); if(~isKey(D.P, new_key)), D.P(new_key) = 0; end        
-            new_key = state_conversion([og_state(1) - 1, og_state(2) + 1, og_state(3)]); if(~isKey(D.P, new_key)), D.P(new_key) = 0; end   
-            new_key = state_conversion([og_state(1) - 1, og_state(2) - 1, og_state(3)]); if(~isKey(D.P, new_key)), D.P(new_key) = 0; end
-            new_key = state_conversion([og_state(1) + 1, og_state(2), og_state(3) + 1]); if(~isKey(D.P, new_key)), D.P(new_key) = 0; end
-            new_key = state_conversion([og_state(1) + 1, og_state(2), og_state(3) - 1]); if(~isKey(D.P, new_key)), D.P(new_key) = 0; end
-            new_key = state_conversion([og_state(1) - 1, og_state(2), og_state(3) + 1]); if(~isKey(D.P, new_key)), D.P(new_key) = 0; end
-            new_key = state_conversion([og_state(1) - 1, og_state(2), og_state(3) - 1]); if(~isKey(D.P, new_key)), D.P(new_key) = 0; end
-            new_key = state_conversion([og_state(1), og_state(2) + 1, og_state(3) + 1]); if(~isKey(D.P, new_key)), D.P(new_key) = 0; end
-            new_key = state_conversion([og_state(1), og_state(2) + 1, og_state(3) - 1]); if(~isKey(D.P, new_key)), D.P(new_key) = 0; end
-            new_key = state_conversion([og_state(1), og_state(2) - 1, og_state(3) + 1]); if(~isKey(D.P, new_key)), D.P(new_key) = 0; end
-            new_key = state_conversion([og_state(1), og_state(2) - 1, og_state(3) - 1]); if(~isKey(D.P, new_key)), D.P(new_key) = 0; end
+            new_key = state_conversion([og_state(1) + 1, og_state(2) + 1, og_state(3)],G); if(~isKey(D.P, new_key)), D.P(new_key) = 0; end
+            new_key = state_conversion([og_state(1) + 1, og_state(2) - 1, og_state(3)],G); if(~isKey(D.P, new_key)), D.P(new_key) = 0; end        
+            new_key = state_conversion([og_state(1) - 1, og_state(2) + 1, og_state(3)],G); if(~isKey(D.P, new_key)), D.P(new_key) = 0; end   
+            new_key = state_conversion([og_state(1) - 1, og_state(2) - 1, og_state(3)],G); if(~isKey(D.P, new_key)), D.P(new_key) = 0; end
+            new_key = state_conversion([og_state(1) + 1, og_state(2), og_state(3) + 1],G); if(~isKey(D.P, new_key)), D.P(new_key) = 0; end
+            new_key = state_conversion([og_state(1) + 1, og_state(2), og_state(3) - 1],G); if(~isKey(D.P, new_key)), D.P(new_key) = 0; end
+            new_key = state_conversion([og_state(1) - 1, og_state(2), og_state(3) + 1],G); if(~isKey(D.P, new_key)), D.P(new_key) = 0; end
+            new_key = state_conversion([og_state(1) - 1, og_state(2), og_state(3) - 1],G); if(~isKey(D.P, new_key)), D.P(new_key) = 0; end
+            new_key = state_conversion([og_state(1), og_state(2) + 1, og_state(3) + 1],G); if(~isKey(D.P, new_key)), D.P(new_key) = 0; end
+            new_key = state_conversion([og_state(1), og_state(2) + 1, og_state(3) - 1],G); if(~isKey(D.P, new_key)), D.P(new_key) = 0; end
+            new_key = state_conversion([og_state(1), og_state(2) - 1, og_state(3) + 1],G); if(~isKey(D.P, new_key)), D.P(new_key) = 0; end
+            new_key = state_conversion([og_state(1), og_state(2) - 1, og_state(3) - 1],G); if(~isKey(D.P, new_key)), D.P(new_key) = 0; end
             
             %   Corners (8)
-            new_key = state_conversion([og_state(1) + 1, og_state(2) + 1, og_state(3) + 1]); if(~isKey(D.P, new_key)), D.P(new_key) = 0; end
-            new_key = state_conversion([og_state(1) + 1, og_state(2) + 1, og_state(3) - 1]); if(~isKey(D.P, new_key)), D.P(new_key) = 0; end
-            new_key = state_conversion([og_state(1) + 1, og_state(2) - 1, og_state(3) + 1]); if(~isKey(D.P, new_key)), D.P(new_key) = 0; end
-            new_key = state_conversion([og_state(1) - 1, og_state(2) + 1, og_state(3) + 1]); if(~isKey(D.P, new_key)), D.P(new_key) = 0; end
-            new_key = state_conversion([og_state(1) + 1, og_state(2) - 1, og_state(3) - 1]); if(~isKey(D.P, new_key)), D.P(new_key) = 0; end
-            new_key = state_conversion([og_state(1) - 1, og_state(2) - 1, og_state(3) + 1]); if(~isKey(D.P, new_key)), D.P(new_key) = 0; end
-            new_key = state_conversion([og_state(1) - 1, og_state(2) + 1, og_state(3) - 1]); if(~isKey(D.P, new_key)), D.P(new_key) = 0; end
-            new_key = state_conversion([og_state(1) - 1, og_state(2) - 1, og_state(3) - 1]); if(~isKey(D.P, new_key)), D.P(new_key) = 0; end
+            new_key = state_conversion([og_state(1) + 1, og_state(2) + 1, og_state(3) + 1],G); if(~isKey(D.P, new_key)), D.P(new_key) = 0; end
+            new_key = state_conversion([og_state(1) + 1, og_state(2) + 1, og_state(3) - 1],G); if(~isKey(D.P, new_key)), D.P(new_key) = 0; end
+            new_key = state_conversion([og_state(1) + 1, og_state(2) - 1, og_state(3) + 1],G); if(~isKey(D.P, new_key)), D.P(new_key) = 0; end
+            new_key = state_conversion([og_state(1) - 1, og_state(2) + 1, og_state(3) + 1],G); if(~isKey(D.P, new_key)), D.P(new_key) = 0; end
+            new_key = state_conversion([og_state(1) + 1, og_state(2) - 1, og_state(3) - 1],G); if(~isKey(D.P, new_key)), D.P(new_key) = 0; end
+            new_key = state_conversion([og_state(1) - 1, og_state(2) - 1, og_state(3) + 1],G); if(~isKey(D.P, new_key)), D.P(new_key) = 0; end
+            new_key = state_conversion([og_state(1) - 1, og_state(2) + 1, og_state(3) - 1],G); if(~isKey(D.P, new_key)), D.P(new_key) = 0; end
+            new_key = state_conversion([og_state(1) - 1, og_state(2) - 1, og_state(3) - 1],G); if(~isKey(D.P, new_key)), D.P(new_key) = 0; end
         end
     end
     D.n = numEntries(D.P); D.keys = keys(D.P); D.values = values(D.P);
@@ -171,7 +156,7 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function Rotate_Plot(D,G,ys)                      
     N=round(2*G.L/G.dx)+1; M=(N-1)/2+1; Pfull=zeros(N,N,N); D.n = numEntries(D.P); D.keys = keys(D.P); D.values = values(D.P);
-    for l=2:D.n, state = key_conversion(D.keys(l)); i = state(1)+M; j = state(2)+M; k = state(3)+M;
+    for l=2:D.n, state = key_conversion(D.keys(l),G); i = state(1)+M; j = state(2)+M; k = state(3)+M;
         if i>0 && i<=N && j>0 && j<=N && k>0 && k<=N, Pfull(j,i,k)=D.values(l); end, end
     figure(1)
     isosurface(-G.L:G.dx:G.L,-G.L:G.dx:G.L,-G.L:G.dx:G.L,Pfull,0.005); 
@@ -194,11 +179,11 @@ function [K]=RHS_P(D,G)
     D.n = numEntries(D.P); D.keys = keys(D.P); D.values = values(D.P); K(1:D.n,1)=0; 
     D.f(D.keys) = {zeros(1,G.d)};
     for l=2:D.n
-        l_key = D.keys(l); l_state = key_conversion(l_key);
+        l_key = D.keys(l); l_state = key_conversion(l_key,G);
         f_l = D.f(l_key); f_l = f_l{1}; u_l = D.u(l_key); u_l = u_l{1}; w_l = D.w(l_key); w_l = w_l{1};  
         for d=1:G.d
-            k_state = l_state; k_state(d) = k_state(d)+1; k_key = state_conversion(k_state);
-            if(~isKey(D.P,k_key)),k_key = "0";end
+            k_state = l_state; k_state(d) = k_state(d)+1; k_key = state_conversion(k_state,G);
+            if(~isKey(D.P,k_key)),k_key = uint64(0);end
             f_l(d) = w_l(d)*D.P(l_key) + u_l(d)*D.P(k_key);
         end
         D.f(l_key) = {f_l};
@@ -206,21 +191,21 @@ function [K]=RHS_P(D,G)
 
     for d=1:G.d
         for l=2:D.n
-            l_key = D.keys(l); l_state = key_conversion(l_key);
+            l_key = D.keys(l); l_state = key_conversion(l_key,G);
             f_l = D.f(l_key); f_l = f_l{1}; w_l = D.w(l_key); w_l = w_l{1}; 
-            i_state = l_state; i_state(d) = i_state(d)-1; i_key = state_conversion(i_state);
-            if(~isKey(D.P,i_key)),i_key = "0";end
+            i_state = l_state; i_state(d) = i_state(d)-1; i_key = state_conversion(i_state,G);
+            if(~isKey(D.P,i_key)),i_key = uint64(0);end
             f_i = D.f(i_key); f_i = f_i{1}; w_i = D.w(i_key); w_i = w_i{1}; u_i = D.u(i_key); u_i = u_i{1};
             v_i = D.v(i_key); v_i = v_i{1};
             if (D.P(l_key)>G.thresh)||(D.P(i_key)>G.thresh)
                 F=G.dt*(D.P(l_key)-D.P(i_key))/(2*G.dx);
                 for e=1:G.d
                     if e~=d
-                        j_state = l_state; j_state(e) = j_state(e)-1; j_key = state_conversion(j_state);
-                        if(~isKey(D.P,j_key)),j_key = "0";end
+                        j_state = l_state; j_state(e) = j_state(e)-1; j_key = state_conversion(j_state,G);
+                        if(~isKey(D.P,j_key)),j_key = uint64(0);end
                         f_j = D.f(j_key); f_j = f_j{1}; w_j = D.w(j_key); w_j = w_j{1}; u_j = D.u(j_key); u_j = u_j{1};
-                        p_state = i_state; p_state(e) = p_state(e)-1; p_key = state_conversion(p_state);
-                        if(~isKey(D.P,p_key)),p_key = "0";end
+                        p_state = i_state; p_state(e) = p_state(e)-1; p_key = state_conversion(p_state,G);
+                        if(~isKey(D.P,p_key)),p_key = uint64(0);end
                         f_p = D.f(p_key); f_p = f_p{1}; w_p = D.w(p_key); w_p = w_p{1}; u_p = D.u(p_key); u_p = u_p{1};
 
                         f_l(e) = f_l(e)-w_l(e)*w_i(d)*F;
@@ -232,10 +217,10 @@ function [K]=RHS_P(D,G)
                 D.f(l_key) = {f_l};
                 D.f(i_key) = {f_i};
                 
-                i_i_state = i_state; i_i_state(d) = i_i_state(d)-1; i_i_key = state_conversion(i_i_state);
-                if(~isKey(D.P,i_i_key)),i_i_key = "0";end
-                k_state = l_state; k_state(d) = k_state(d)+1; k_key = state_conversion(k_state);
-                if(~isKey(D.P,k_key)),k_key = "0";end
+                i_i_state = i_state; i_i_state(d) = i_i_state(d)-1; i_i_key = state_conversion(i_i_state,G);
+                if(~isKey(D.P,i_i_key)),i_i_key = uint64(0);end
+                k_state = l_state; k_state(d) = k_state(d)+1; k_key = state_conversion(k_state,G);
+                if(~isKey(D.P,k_key)),k_key = uint64(0);end
                 if(v_i(d)>0)
                     th=(D.P(i_key)-D.P(i_i_key))/(D.P(l_key)-D.P(i_key));
                 else
@@ -249,11 +234,11 @@ function [K]=RHS_P(D,G)
     end
     
     for l=2:D.n
-        l_key = D.keys(l); l_state = key_conversion(l_key);
+        l_key = D.keys(l); l_state = key_conversion(l_key,G);
         f_l = D.f(l_key); f_l = f_l{1};
         for d=1:G.d
-            i_state = l_state; i_state(d) = i_state(d)-1; i_key = state_conversion(i_state);
-            if(~isKey(D.P,i_key)),i_key = "0";end
+            i_state = l_state; i_state(d) = i_state(d)-1; i_key = state_conversion(i_state,G);
+            if(~isKey(D.P,i_key)),i_key = uint64(0);end
             f_i = D.f(i_key); f_i = f_i{1};
             K(l,1)=K(l,1)-(f_l(d)-f_i(d))/G.dx;
         end
@@ -265,35 +250,35 @@ function [phi]=VL(th), phi=min((th+abs(th))/(1+abs(th)),0); end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function bool=no_neighbors(D,G,l)
     bool = 1;
-    current_key = D.keys(l); og_state = key_conversion(current_key);
+    current_key = D.keys(l); og_state = key_conversion(current_key,G);
     % Faces (6)
-    new_key = state_conversion([og_state(1)+1 og_state(2) og_state(3)]); if(isKey(D.P, new_key)), if(D.P(new_key)>=G.thresh), bool = 0; return; end, end
-    new_key = state_conversion([og_state(1)-1 og_state(2) og_state(3)]); if(isKey(D.P, new_key)), if(D.P(new_key)>=G.thresh), bool = 0; return; end, end
-    new_key = state_conversion([og_state(1) og_state(2)+1 og_state(3)]); if(isKey(D.P, new_key)), if(D.P(new_key)>=G.thresh), bool = 0; return; end, end
-    new_key = state_conversion([og_state(1) og_state(2)-1 og_state(3)]); if(isKey(D.P, new_key)), if(D.P(new_key)>=G.thresh), bool = 0; return; end, end        
-    new_key = state_conversion([og_state(1) og_state(2) og_state(3)+1]); if(isKey(D.P, new_key)), if(D.P(new_key)>=G.thresh), bool = 0; return; end, end        
-    new_key = state_conversion([og_state(1) og_state(2) og_state(3)-1]); if(isKey(D.P, new_key)), if(D.P(new_key)>=G.thresh), bool = 0; return; end, end        
+    new_key = state_conversion([og_state(1)+1 og_state(2) og_state(3)],G); if(isKey(D.P, new_key)), if(D.P(new_key)>=G.thresh), bool = 0; return; end, end
+    new_key = state_conversion([og_state(1)-1 og_state(2) og_state(3)],G); if(isKey(D.P, new_key)), if(D.P(new_key)>=G.thresh), bool = 0; return; end, end
+    new_key = state_conversion([og_state(1) og_state(2)+1 og_state(3)],G); if(isKey(D.P, new_key)), if(D.P(new_key)>=G.thresh), bool = 0; return; end, end
+    new_key = state_conversion([og_state(1) og_state(2)-1 og_state(3)],G); if(isKey(D.P, new_key)), if(D.P(new_key)>=G.thresh), bool = 0; return; end, end        
+    new_key = state_conversion([og_state(1) og_state(2) og_state(3)+1],G); if(isKey(D.P, new_key)), if(D.P(new_key)>=G.thresh), bool = 0; return; end, end        
+    new_key = state_conversion([og_state(1) og_state(2) og_state(3)-1],G); if(isKey(D.P, new_key)), if(D.P(new_key)>=G.thresh), bool = 0; return; end, end        
     
     % Edges (12)
-    new_key = state_conversion([og_state(1)+1 og_state(2)+1 og_state(3)]); if(isKey(D.P, new_key)), if(D.P(new_key)>=G.thresh), bool = 0; return; end, end
-    new_key = state_conversion([og_state(1)+1 og_state(2)-1 og_state(3)]); if(isKey(D.P, new_key)), if(D.P(new_key)>=G.thresh), bool = 0; return; end, end        
-    new_key = state_conversion([og_state(1)-1 og_state(2)+1 og_state(3)]); if(isKey(D.P, new_key)), if(D.P(new_key)>=G.thresh), bool = 0; return; end, end   
-    new_key = state_conversion([og_state(1)-1 og_state(2)-1 og_state(3)]); if(isKey(D.P, new_key)), if(D.P(new_key)>=G.thresh), bool = 0; return; end, end
-    new_key = state_conversion([og_state(1)+1 og_state(2) og_state(3)+1]); if(isKey(D.P, new_key)), if(D.P(new_key)>=G.thresh), bool = 0; return; end, end
-    new_key = state_conversion([og_state(1)+1 og_state(2) og_state(3)-1]); if(isKey(D.P, new_key)), if(D.P(new_key)>=G.thresh), bool = 0; return; end, end
-    new_key = state_conversion([og_state(1)-1 og_state(2) og_state(3)+1]); if(isKey(D.P, new_key)), if(D.P(new_key)>=G.thresh), bool = 0; return; end, end
-    new_key = state_conversion([og_state(1)-1 og_state(2) og_state(3)-1]); if(isKey(D.P, new_key)), if(D.P(new_key)>=G.thresh), bool = 0; return; end, end
-    new_key = state_conversion([og_state(1) og_state(2)+1 og_state(3)+1]); if(isKey(D.P, new_key)), if(D.P(new_key)>=G.thresh), bool = 0; return; end, end
-    new_key = state_conversion([og_state(1) og_state(2)+1 og_state(3)-1]); if(isKey(D.P, new_key)), if(D.P(new_key)>=G.thresh), bool = 0; return; end, end
-    new_key = state_conversion([og_state(1) og_state(2)-1 og_state(3)+1]); if(isKey(D.P, new_key)), if(D.P(new_key)>=G.thresh), bool = 0; return; end, end
-    new_key = state_conversion([og_state(1) og_state(2)-1 og_state(3)-1]); if(isKey(D.P, new_key)), if(D.P(new_key)>=G.thresh), bool = 0; return; end, end
+    new_key = state_conversion([og_state(1)+1 og_state(2)+1 og_state(3)],G); if(isKey(D.P, new_key)), if(D.P(new_key)>=G.thresh), bool = 0; return; end, end
+    new_key = state_conversion([og_state(1)+1 og_state(2)-1 og_state(3)],G); if(isKey(D.P, new_key)), if(D.P(new_key)>=G.thresh), bool = 0; return; end, end        
+    new_key = state_conversion([og_state(1)-1 og_state(2)+1 og_state(3)],G); if(isKey(D.P, new_key)), if(D.P(new_key)>=G.thresh), bool = 0; return; end, end   
+    new_key = state_conversion([og_state(1)-1 og_state(2)-1 og_state(3)],G); if(isKey(D.P, new_key)), if(D.P(new_key)>=G.thresh), bool = 0; return; end, end
+    new_key = state_conversion([og_state(1)+1 og_state(2) og_state(3)+1],G); if(isKey(D.P, new_key)), if(D.P(new_key)>=G.thresh), bool = 0; return; end, end
+    new_key = state_conversion([og_state(1)+1 og_state(2) og_state(3)-1],G); if(isKey(D.P, new_key)), if(D.P(new_key)>=G.thresh), bool = 0; return; end, end
+    new_key = state_conversion([og_state(1)-1 og_state(2) og_state(3)+1],G); if(isKey(D.P, new_key)), if(D.P(new_key)>=G.thresh), bool = 0; return; end, end
+    new_key = state_conversion([og_state(1)-1 og_state(2) og_state(3)-1],G); if(isKey(D.P, new_key)), if(D.P(new_key)>=G.thresh), bool = 0; return; end, end
+    new_key = state_conversion([og_state(1) og_state(2)+1 og_state(3)+1],G); if(isKey(D.P, new_key)), if(D.P(new_key)>=G.thresh), bool = 0; return; end, end
+    new_key = state_conversion([og_state(1) og_state(2)+1 og_state(3)-1],G); if(isKey(D.P, new_key)), if(D.P(new_key)>=G.thresh), bool = 0; return; end, end
+    new_key = state_conversion([og_state(1) og_state(2)-1 og_state(3)+1],G); if(isKey(D.P, new_key)), if(D.P(new_key)>=G.thresh), bool = 0; return; end, end
+    new_key = state_conversion([og_state(1) og_state(2)-1 og_state(3)-1],G); if(isKey(D.P, new_key)), if(D.P(new_key)>=G.thresh), bool = 0; return; end, end
     %   Corners (8)
-    new_key = state_conversion([og_state(1)+1 og_state(2)+1 og_state(3)+1]); if(isKey(D.P, new_key)), if(D.P(new_key)>=G.thresh), bool = 0; return; end, end
-    new_key = state_conversion([og_state(1)+1 og_state(2)+1 og_state(3)-1]); if(isKey(D.P, new_key)), if(D.P(new_key)>=G.thresh), bool = 0; return; end, end
-    new_key = state_conversion([og_state(1)+1 og_state(2)-1 og_state(3)+1]); if(isKey(D.P, new_key)), if(D.P(new_key)>=G.thresh), bool = 0; return; end, end
-    new_key = state_conversion([og_state(1)-1 og_state(2)+1 og_state(3)+1]); if(isKey(D.P, new_key)), if(D.P(new_key)>=G.thresh), bool = 0; return; end, end
-    new_key = state_conversion([og_state(1)+1 og_state(2)-1 og_state(3)-1]); if(isKey(D.P, new_key)), if(D.P(new_key)>=G.thresh), bool = 0; return; end, end
-    new_key = state_conversion([og_state(1)-1 og_state(2)-1 og_state(3)+1]); if(isKey(D.P, new_key)), if(D.P(new_key)>=G.thresh), bool = 0; return; end, end
-    new_key = state_conversion([og_state(1)-1 og_state(2)+1 og_state(3)-1]); if(isKey(D.P, new_key)), if(D.P(new_key)>=G.thresh), bool = 0; return; end, end
-    new_key = state_conversion([og_state(1)-1 og_state(2)-1 og_state(3)-1]); if(isKey(D.P, new_key)), if(D.P(new_key)>=G.thresh), bool = 0; return; end, end
+    new_key = state_conversion([og_state(1)+1 og_state(2)+1 og_state(3)+1],G); if(isKey(D.P, new_key)), if(D.P(new_key)>=G.thresh), bool = 0; return; end, end
+    new_key = state_conversion([og_state(1)+1 og_state(2)+1 og_state(3)-1],G); if(isKey(D.P, new_key)), if(D.P(new_key)>=G.thresh), bool = 0; return; end, end
+    new_key = state_conversion([og_state(1)+1 og_state(2)-1 og_state(3)+1],G); if(isKey(D.P, new_key)), if(D.P(new_key)>=G.thresh), bool = 0; return; end, end
+    new_key = state_conversion([og_state(1)-1 og_state(2)+1 og_state(3)+1],G); if(isKey(D.P, new_key)), if(D.P(new_key)>=G.thresh), bool = 0; return; end, end
+    new_key = state_conversion([og_state(1)+1 og_state(2)-1 og_state(3)-1],G); if(isKey(D.P, new_key)), if(D.P(new_key)>=G.thresh), bool = 0; return; end, end
+    new_key = state_conversion([og_state(1)-1 og_state(2)-1 og_state(3)+1],G); if(isKey(D.P, new_key)), if(D.P(new_key)>=G.thresh), bool = 0; return; end, end
+    new_key = state_conversion([og_state(1)-1 og_state(2)+1 og_state(3)-1],G); if(isKey(D.P, new_key)), if(D.P(new_key)>=G.thresh), bool = 0; return; end, end
+    new_key = state_conversion([og_state(1)-1 og_state(2)-1 og_state(3)-1],G); if(isKey(D.P, new_key)), if(D.P(new_key)>=G.thresh), bool = 0; return; end, end
 end

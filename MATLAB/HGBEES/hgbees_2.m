@@ -5,6 +5,7 @@ G.dt=.0005; dt=.005; G.dx=0.4; G.d=3; G.sigma=4; G.b=1; G.r=48; G.L=30;
 %%%%%%%%%%%%%%%% end of user input %%%%%%%%%%%%%%%% 
 G.Y = eye(G.d,'int16'); [hD] = Initialize_D(G); 
 
+%{
 figure(1); clf; y=G.start; ys=y; 
 for timestep=1:10000
   k1=RHS(y,G); k2=RHS(y+(dt/2)*k1,G); k3=RHS(y+(dt/2)*k2,G); k4=RHS(y+dt*k3,G);    
@@ -33,9 +34,11 @@ for P=1:200; y=G.start+0.5*randn(3,1); ys=y;
   plot3(ys(1,121),ys(2,121),ys(3,121),'k+'); plot3(ys(1,161),ys(2,161),ys(3,161),'k+');
   drawnow;
 end
+%}
 
+numEntries(hD.P),
 
-y=G.start; ys=y; t=0; [hD]=Modify_pointset(hD,G); Rotate_Plot(hD,G,ys);
+y=G.start; ys=y; t=0; [hD]=Modify_pointset(hD,G); %Rotate_Plot(hD,G,ys);
 
 for timestep=1:T/G.dt, disp("Timestep: " + string(timestep)); t=t+G.dt; if mod(timestep,1)==0, [hD]=Modify_pointset(hD,G); end
   K=RHS_P(hD,G); hD.keys = keys(hD.P); hD.P(hD.keys) = hD.P(hD.keys) + G.dt.*K;
@@ -130,7 +133,7 @@ function [D] = Modify_pointset(D,G)
             new_key = {[og_state(1)-1 og_state(2)-1 og_state(3)-1]}; if(~isKey(D.P, new_key)), D.P(new_key) = 0; end
         end
     end
-    D.n = numEntries(D.P); D.keys = keys(D.P); 
+    D.n = numEntries(D.P); disp(D.n); pause(inf); D.keys = keys(D.P); 
     D = Initialize_vuw(D,G,D.m+1);
 
     for l=2:D.m                     % Remove Small Elements which do not neighbor big elements
