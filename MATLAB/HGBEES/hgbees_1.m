@@ -1,11 +1,13 @@
-function hD = hgbees_1
+function hgbees_1
 %%%%%%%%%%%%%%%%% begin user input %%%%%%%%%%%%%%%% 
 T=1; G.thresh=0.00002; G.start=[-11.5; -10; 9.5];
 G.dt=.0005; dt=.005; G.dx=0.4; G.d=3; G.sigma=4; G.b=1; G.r=48; G.L=30;
-G.N_bits = 8; G.N_data = G.d; G.fac=uint64(2^G.N_bits); G.offset32=int32(G.fac/2); G.offset64=int64(G.offset32);
+G.N_bits = 8; G.N_data = G.d; fac = uint64(2^G.N_bits); for i=1:G.N_data, G.fac(i) = fac^(i-1); end 
+G.offset32=int32(fac/2); G.offset64=int64(G.offset32);
 %%%%%%%%%%%%%%%% end of user input %%%%%%%%%%%%%%%% 
 G.Y = eye(G.d,'int16'); [hD] = Initialize_D(G); 
 
+%{
 figure(1); clf; y=G.start; ys=y; 
 for timestep=1:10000
   k1=RHS(y,G); k2=RHS(y+(dt/2)*k1,G); k3=RHS(y+(dt/2)*k2,G); k4=RHS(y+dt*k3,G);    
@@ -34,15 +36,19 @@ for P=1:200; y=G.start+0.5*randn(3,1); ys=y;
   plot3(ys(1,121),ys(2,121),ys(3,121),'k+'); plot3(ys(1,161),ys(2,161),ys(3,161),'k+');
   drawnow;
 end
+%}
 
-y=G.start; ys=y; t=0; [hD]=Modify_pointset(hD,G); Rotate_Plot(hD,G,ys); 
+y=G.start; ys=y; t=0; [hD]=Modify_pointset(hD,G); %Rotate_Plot(hD,G,ys); 
 
-for timestep=1:T/G.dt, disp("Timestep: " + string(timestep)); t=t+G.dt; if mod(timestep,1)==0, [hD]=Modify_pointset(hD,G); end
+%for timestep=1:T/G.dt
+for timestep=1:50, disp("Timestep: " + string(timestep)); t=t+G.dt; if mod(timestep,1)==0, [hD]=Modify_pointset(hD,G); end
   K=RHS_P(hD,G); hD.keys = keys(hD.P); hD.P(hD.keys) = hD.P(hD.keys) + G.dt.*K;
+  %{
   k1=RHS(y,G); k2=RHS(y+(G.dt/2)*k1,G); k3=RHS(y+(G.dt/2)*k2,G); k4=RHS(y+G.dt*k3,G);    
   ynew=y+(G.dt/6)*k1+(G.dt/3)*(k2+k3)+(G.dt/6)*k4; ys=[ys ynew]; y=ynew; 
   if mod(timestep,25)==0, Rotate_Plot(hD,G,ys),  end
-end, Rotate_Plot(hD,G,ys),
+  %}
+end %Rotate_Plot(hD,G,ys),
 
 %{
 figure(1);
@@ -92,17 +98,17 @@ end
 function key = state_conversion(state,G)
     state = int32(state); state = uint64(state + G.offset32);
     key=uint64(0);
-    for i=1:G.N_data; key=key+state(i)*G.fac^(i-1); end
+    for i=1:G.N_data; key=key+state(i)*G.fac(i); end
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function state = key_conversion(key,G)
     for i=G.N_data:-1:1
-        state(i)=idivide(key,G.fac^(i-1),'floor');
-        key=key-state(i)*G.fac^(i-1);
+        state(i)=idivide(key,G.fac(i),'floor');
+        key=key-state(i)*G.fac(i);
     end
     state=int64(state)-G.offset64;
 end
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function [D] = Modify_pointset(D,G) 
     D.keys = keys(D.P); D.m = numEntries(D.P);
     for l=2:D.m    % Check/Create Neighbors of Big Cells
@@ -177,9 +183,9 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function [K]=RHS_P(D,G)
     D.n = numEntries(D.P); D.keys = keys(D.P); D.values = values(D.P); K(1:D.n,1)=0; 
-    D.f(D.keys) = {zeros(1,G.d)};
+    D.f(D.keys) = {zeros(1,G.d)}; states = {};
     for l=2:D.n
-        l_key = D.keys(l); l_state = key_conversion(l_key,G);
+        l_key = D.keys(l); l_state = key_conversion(l_key,G); states{end+1} = l_state;
         f_l = D.f(l_key); f_l = f_l{1}; u_l = D.u(l_key); u_l = u_l{1}; w_l = D.w(l_key); w_l = w_l{1};  
         for d=1:G.d
             k_state = l_state; k_state(d) = k_state(d)+1; k_key = state_conversion(k_state,G);
@@ -191,7 +197,7 @@ function [K]=RHS_P(D,G)
 
     for d=1:G.d
         for l=2:D.n
-            l_key = D.keys(l); l_state = key_conversion(l_key,G);
+            l_key = D.keys(l); l_state = states{l-1};
             f_l = D.f(l_key); f_l = f_l{1}; w_l = D.w(l_key); w_l = w_l{1}; 
             i_state = l_state; i_state(d) = i_state(d)-1; i_key = state_conversion(i_state,G);
             if(~isKey(D.P,i_key)),i_key = uint64(0);end
@@ -234,7 +240,7 @@ function [K]=RHS_P(D,G)
     end
     
     for l=2:D.n
-        l_key = D.keys(l); l_state = key_conversion(l_key,G);
+        l_key = D.keys(l); l_state = states{l-1};
         f_l = D.f(l_key); f_l = f_l{1};
         for d=1:G.d
             i_state = l_state; i_state(d) = i_state(d)-1; i_key = state_conversion(i_state,G);

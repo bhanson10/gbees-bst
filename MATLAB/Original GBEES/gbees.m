@@ -5,6 +5,7 @@ G.dt=.0005; dt=.005; G.dx=0.4; G.d=3; G.sigma=4; G.b=1; G.r=48; G.L=30;
 %%%%%%%%%%%%%%%% end of user input %%%%%%%%%%%%%j%% 
 G.Y=eye(G.d,'int16'); [D]=Initialize_D(G); h1=round(G.dx/G.dt); 
 
+%{
 figure(1); clf; y=start; ys=y; 
 for timestep=1:10000
   k1=RHS(y,G); k2=RHS(y+(dt/2)*k1,G); k3=RHS(y+(dt/2)*k2,G); k4=RHS(y+dt*k3,G);    
@@ -33,18 +34,22 @@ for P=1:200; y=start+0.5*randn(3,1); ys=y;
   plot3(ys(1,121),ys(2,121),ys(3,121),'k+'); plot3(ys(1,161),ys(2,161),ys(3,161),'k+');
   drawnow;
 end
+%}
 
-y=start; ys=y; t=0; [D]=Modify_pointset(D,G); Rotate_Plot(D,G,ys);
-
-for timestep=1:T/G.dt,t=t+G.dt;  disp("Timestep: " + string(timestep));if mod(timestep,1)==0, [D]=Modify_pointset(D,G); end
+y=start; ys=y; t=0; [D]=Modify_pointset(D,G); %Rotate_Plot(D,G,ys);
+%for timestep=1:T/G.dt
+for timestep=1:100,t=t+G.dt;  disp("Timestep: " + string(timestep));if mod(timestep,1)==0, [D]=Modify_pointset(D,G); end
   K=RHS_P(D,D.P(1:D.n),G); D.P(2:D.n,1)=D.P(2:D.n)+G.dt*K(2:D.n);                
   
+  %{
   k1=RHS(y,G); k2=RHS(y+(G.dt/2)*k1,G); k3=RHS(y+(G.dt/2)*k2,G); k4=RHS(y+G.dt*k3,G);    
   ynew=y+(G.dt/6)*k1+(G.dt/3)*(k2+k3)+(G.dt/6)*k4; ys=[ys ynew]; y=ynew;
   
   if mod(timestep,400)==0, Rotate_Plot(D,G,ys),  end
-end, Rotate_Plot(D,G,ys),
+  %}
+end %Rotate_Plot(D,G,ys),
 
+%{
 figure(1);
 view(-109,14); print -depsc2 -opengl -r600 pdfA.v1.eps
 view(-31,2);   print -depsc2 -opengl -r600 pdfA.v2.eps
@@ -52,7 +57,7 @@ view(-31,2);   print -depsc2 -opengl -r600 pdfA.v2.eps
 figure(2);
 view(-109,14); print -depsc2 -opengl -r600 trajA.v1.eps
 view(-31,2);   print -depsc2 -opengl -r600 trajA.v2.eps
-
+%}
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %                                     FUNCTIONS

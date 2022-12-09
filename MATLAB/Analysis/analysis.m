@@ -11,7 +11,7 @@ G.Y=eye(G.d,'int16'); [D]=G_Initialize_D(G); h1=round(G.dx/G.dt);
 
 y=G.start; ys=y; t=0; [D]=G_Modify_pointset(D,G); G_ind_time = []; G_total_time = []; G_size = [];
 %for timestep=1:T/G.dt,
-for timestep=1:50, disp("Timestep: " + string(timestep)); tic; if mod(timestep,1)==0, [D]=G_Modify_pointset(D,G); end
+for timestep=1:T/G.dt, disp("Timestep: " + string(timestep)); tic; if mod(timestep,1)==0, [D]=G_Modify_pointset(D,G); end
     K=G_RHS_P(D,D.P(1:D.n),G); D.P(2:D.n,1)=D.P(2:D.n)+G.dt*K(2:D.n);                
     
     k1=RHS(y,G); k2=RHS(y+(G.dt/2)*k1,G); k3=RHS(y+(G.dt/2)*k2,G); k4=RHS(y+G.dt*k3,G);    
@@ -35,11 +35,12 @@ end
 disp("%%%%%%%%%%% ENTERING HGBEES_1 %%%%%%%%%%%");
 disp(" ");
 
-G.N_bits = 8; G.N_data = G.d; G.fac=uint64(2^G.N_bits); G.offset32=int32(G.fac/2); G.offset64=int64(G.offset32);
+G.N_bits = 8; G.N_data = G.d; fac = uint64(2^G.N_bits); for i=1:G.N_data, G.fac(i) = fac^(i-1); end 
+G.offset32=int32(fac/2); G.offset64=int64(G.offset32);
 [hD] = H1_Initialize_D(G); 
 t=0; [hD]=H1_Modify_pointset(hD,G); H1_ind_time = []; H1_total_time = []; H1_size = [];
 
-for timestep=1:50, disp("Timestep: " + string(timestep)); tic; t=t+G.dt; if mod(timestep,1)==0, [hD]=H1_Modify_pointset(hD,G); end
+for timestep=1:T/G.dt, disp("Timestep: " + string(timestep)); tic; t=t+G.dt; if mod(timestep,1)==0, [hD]=H1_Modify_pointset(hD,G); end
     K=H1_RHS_P(hD,G); hD.keys = keys(hD.P); hD.P(hD.keys) = hD.P(hD.keys) + G.dt.*K;
     
     ind_time = toc;
@@ -61,7 +62,7 @@ disp(" ");
 [hD] = H2_Initialize_D(G); 
 y=G.start; ys=y; t=0; [hD]=H2_Modify_pointset(hD,G); H2_ind_time = []; H2_total_time = []; H2_size = [];
 
-for timestep=1:50, disp("Timestep: " + string(timestep)); tic; t=t+G.dt; if mod(timestep,1)==0, [hD]=H2_Modify_pointset(hD,G); end
+for timestep=1:T/G.dt, disp("Timestep: " + string(timestep)); tic; t=t+G.dt; if mod(timestep,1)==0, [hD]=H2_Modify_pointset(hD,G); end
     K=H2_RHS_P(hD,G); hD.keys = keys(hD.P); hD.P(hD.keys) = hD.P(hD.keys) + G.dt.*K;
     
     ind_time = toc;
@@ -77,7 +78,7 @@ for timestep=1:50, disp("Timestep: " + string(timestep)); tic; t=t+G.dt; if mod(
 end
 
 figure(1); clf; hold on
-timestep = [1:50];
+timestep = [1:T/G.dt];
 plot(timestep, G_total_time, 'k', 'LineWidth', 1, 'DisplayName', 'GBEES');
 plot(timestep, H1_total_time, 'b', 'LineWidth', 1, 'DisplayName', 'HGBEES1');
 plot(timestep, H2_total_time, 'r', 'LineWidth', 1, 'DisplayName', 'HGBEES2');
@@ -267,13 +268,13 @@ end
 function key = state_conversion(state,G)
     state = int32(state); state = uint64(state + G.offset32);
     key=uint64(0);
-    for i=1:G.N_data; key=key+state(i)*G.fac^(i-1); end
+    for i=1:G.N_data; key=key+state(i)*G.fac(i); end
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function state = key_conversion(key,G)
     for i=G.N_data:-1:1
-        state(i)=idivide(key,G.fac^(i-1),'floor');
-        key=key-state(i)*G.fac^(i-1);
+        state(i)=idivide(key,G.fac(i),'floor');
+        key=key-state(i)*G.fac(i);
     end
     state=int64(state)-G.offset64;
 end
@@ -331,9 +332,9 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function [K]=H1_RHS_P(D,G)
     D.n = numEntries(D.P); D.keys = keys(D.P); D.values = values(D.P); K(1:D.n,1)=0; 
-    D.f(D.keys) = {zeros(1,G.d)};
+    D.f(D.keys) = {zeros(1,G.d)}; states = {};
     for l=2:D.n
-        l_key = D.keys(l); l_state = key_conversion(l_key,G);
+        l_key = D.keys(l); l_state = key_conversion(l_key,G); states{end+1} = l_state;
         f_l = D.f(l_key); f_l = f_l{1}; u_l = D.u(l_key); u_l = u_l{1}; w_l = D.w(l_key); w_l = w_l{1};  
         for d=1:G.d
             k_state = l_state; k_state(d) = k_state(d)+1; k_key = state_conversion(k_state,G);
@@ -345,7 +346,7 @@ function [K]=H1_RHS_P(D,G)
 
     for d=1:G.d
         for l=2:D.n
-            l_key = D.keys(l); l_state = key_conversion(l_key,G);
+            l_key = D.keys(l); l_state = states{l-1};
             f_l = D.f(l_key); f_l = f_l{1}; w_l = D.w(l_key); w_l = w_l{1}; 
             i_state = l_state; i_state(d) = i_state(d)-1; i_key = state_conversion(i_state,G);
             if(~isKey(D.P,i_key)),i_key = uint64(0);end
@@ -388,7 +389,7 @@ function [K]=H1_RHS_P(D,G)
     end
     
     for l=2:D.n
-        l_key = D.keys(l); l_state = key_conversion(l_key,G);
+        l_key = D.keys(l); l_state = states{l-1};
         f_l = D.f(l_key); f_l = f_l{1};
         for d=1:G.d
             i_state = l_state; i_state(d) = i_state(d)-1; i_key = state_conversion(i_state,G);
