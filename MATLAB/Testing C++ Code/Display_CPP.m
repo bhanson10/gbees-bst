@@ -31,8 +31,9 @@ for P=1:200; y=G.start+0.5*randn(3,1); ys=y;
   drawnow;
 end
 
-for i=0:5
-    file = "pdf_" + string(i*400) + ".txt";
+for i=0:6
+    file = "cpp_sim_data_v7_" + string(i) + ".txt";
+    %file = "pdf_" + string(i*400) + ".txt";
     blob_ID = fopen(file, 'r'); blob = fscanf(blob_ID, '%f', [4 inf]);
     D.P = blob(1,:); D.j = blob(2:4,:)'; D.n = length(D.P);
     Rotate_Plot(D,G);

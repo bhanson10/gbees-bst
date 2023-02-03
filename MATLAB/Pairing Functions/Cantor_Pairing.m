@@ -1,4 +1,4 @@
-state = [1 1 1 1 1 1],
+state = [20950 5 5],
 G.d = length(state);
 key = state_conversion(state,G),
 state = key_conversion(key,G),

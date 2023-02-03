@@ -5,7 +5,6 @@ G.dt=.0005; dt=.005; G.xh=G.dx/2; G.d=3; G.sigma=4; G.b=1; G.r=48; G.L=30;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%% end of user input %%%%%%%%%%%%%%%%%%%%%%%%%%% 
 [hD] = Initialize_D(G); 
 
-%{
 figure(1); clf; y=G.start; ys=y; 
 for timestep=1:10000
   k1=RHS(y,G); k2=RHS(y+(dt/2)*k1,G); k3=RHS(y+(dt/2)*k2,G); k4=RHS(y+dt*k3,G);    
@@ -23,7 +22,7 @@ plot3(ys(1,:),ys(2,:),ys(3,:),'k-','linewidth',2); view(-109,14);  hold on;
 plot3(ys(1,1),ys(2,1),ys(3,1),'k*'), plot3(ys(1,end),ys(2,end),ys(3,end),'k*');
 lighting phong; light('Position',[-1 0 0]); drawnow;
 
-for P=1:200; y=G.start+0.5*randn(3,1); ys=y;
+for P=1:10; y=G.start+0.5*randn(3,1); ys=y;
   for timestep=1:T/dt
     k1=RHS(y,G); k2=RHS(y+(dt/2)*k1,G); k3=RHS(y+(dt/2)*k2,G); k4=RHS(y+dt*k3,G);    
     ynew=y+(dt/6)*k1+(dt/3)*(k2+k3)+(dt/6)*k4; ys=[ys ynew]; y=ynew;
@@ -34,11 +33,10 @@ for P=1:200; y=G.start+0.5*randn(3,1); ys=y;
   plot3(ys(1,121),ys(2,121),ys(3,121),'k+'); plot3(ys(1,161),ys(2,161),ys(3,161),'k+');
   drawnow;
 end
-%}
 
-y=G.start; ys=y; t=0; [hD]=Modify_pointset(hD,G); %Rotate_Plot(hD,G,ys); 
+y=G.start; ys=y; t=0; [hD]=Modify_pointset(hD,G); Rotate_Plot(hD,G,ys); 
 
-%for timestep=1:T/G.dt
+%{
 for timestep=1:5, disp("Timestep: " + string(timestep)); t=t+G.dt; if mod(timestep,1)==0, [hD]=Modify_pointset(hD,G); end
   K=RHS_P(hD,G); hD.keys = keys(hD.P); hD.P(hD.keys) = hD.P(hD.keys) + G.dt.*K;
   disp(length(hD.keys)); 
@@ -50,7 +48,6 @@ for timestep=1:5, disp("Timestep: " + string(timestep)); t=t+G.dt; if mod(timest
   %}
 end %Rotate_Plot(hD,G,ys),
 
-%{
 figure(1);
 view(-109,14); print -depsc2 -image -r600 pdfA.v1.eps
 view(-31,2);   print -depsc2 -image -r600 pdfA.v2.eps
@@ -66,7 +63,7 @@ function [D] = Initialize_D(G)
     D.P = dictionary(); D.P(-1) = 0;
     D.v = dictionary(); D.v(-1) = {zeros(1,G.d)};
     D.u = D.v; D.w = D.v; D.f = D.v;
-   
+
     for i=round((G.start(1)-2)/G.dx):round((G.start(1)+2)/G.dx)
         for j=round((G.start(2)-2)/G.dx):round((G.start(2)+2)/G.dx)
             for k=round((G.start(3)-2)/G.dx):round((G.start(3)+2)/G.dx)
@@ -107,7 +104,7 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function [D] = Modify_pointset(D,G) 
     D.keys = keys(D.P); D.m = numEntries(D.P);
-    count = 0;
+
     for l=2:D.m                       % Check/Create Neighbors of Big Cells
         if(D.P(D.keys(l))>=G.thresh)
             current_key = D.keys(l); state = key_conversion(current_key, G);
@@ -121,13 +118,12 @@ function [D] = Modify_pointset(D,G)
                 for j=x_neighbors(1):x_neighbors(end)
                     for k=z_neighbors(1):z_neighbors(end)
                         new_state = [j i k]; new_key = state_conversion(new_state, G);
-                        if(~isKey(D.P, new_key)), D.P(new_key) = 0; count = count + 1; end
+                        if(~isKey(D.P, new_key)), D.P(new_key) = 0; end
                     end
                 end
             end  
         end
     end
-    disp("Added: " + string(count));
     D.n = numEntries(D.P); D.keys = keys(D.P); D.values = values(D.P);
     D = Initialize_vuw(D,G,D.m+1); 
     for l=2:D.m                                     % Remove Small Elements
