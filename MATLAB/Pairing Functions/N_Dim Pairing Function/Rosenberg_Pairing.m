@@ -14,7 +14,7 @@ print_results(states, keys, n);
 %%%%%%%%%%%%%%%%%%%% Examining every state on a Shell %%%%%%%%%%%%%%%%%%%%%
 
 %%%%%%%%%%%%%%%%%%%%%% Examining Individual States %%%%%%%%%%%%%%%%%%%%%%%%
-state = [1 1 1 1 1 1], % Inputs
+state = [100 100 100 100 100 100], % Inputs
 d = length(state);
 key = state_conversion(state,d,1),
 state = key_conversion(key,d,1),

@@ -36,17 +36,15 @@ end
 
 y=G.start; ys=y; t=0; [hD]=Modify_pointset(hD,G); Rotate_Plot(hD,G,ys); 
 
-%{
-for timestep=1:5, disp("Timestep: " + string(timestep)); t=t+G.dt; if mod(timestep,1)==0, [hD]=Modify_pointset(hD,G); end
+for timestep=1:200, disp("Timestep: " + string(timestep)); t=t+G.dt; if mod(timestep,1)==0, [hD]=Modify_pointset(hD,G); end
   K=RHS_P(hD,G); hD.keys = keys(hD.P); hD.P(hD.keys) = hD.P(hD.keys) + G.dt.*K;
   disp(length(hD.keys)); 
   disp(" ");
-  %{
+ 
   k1=RHS(y,G); k2=RHS(y+(G.dt/2)*k1,G); k3=RHS(y+(G.dt/2)*k2,G); k4=RHS(y+G.dt*k3,G);    
   ynew=y+(G.dt/6)*k1+(G.dt/3)*(k2+k3)+(G.dt/6)*k4; ys=[ys ynew]; y=ynew; 
   if mod(timestep,10)==0, Rotate_Plot(hD,G,ys),  end
-  %}
-end %Rotate_Plot(hD,G,ys),
+end, Rotate_Plot(hD,G,ys),
 
 figure(1);
 view(-109,14); print -depsc2 -image -r600 pdfA.v1.eps

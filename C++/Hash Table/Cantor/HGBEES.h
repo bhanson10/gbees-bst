@@ -4,12 +4,9 @@
 #include <iostream>
 #include <unordered_map>
 #include <algorithm>
-#include <cstdlib>
 #include <cmath>
 #include <fstream>
-#include <string>
 #include <string.h>
-using namespace std;
 
 const int DIM = 3; 
 /*==============================================================================
@@ -46,14 +43,15 @@ class Lorenz3D{       // Lorenz3D Class
 
 class HGBEES{       // HGBEES Class
   public:
-    unordered_map<int, Cell> P;
+    std::unordered_map<int, Cell> P;
 
     void Initialize_D(Grid G,Lorenz3D Lor);
     void Initialize_vuw(Grid G,Lorenz3D Lor);
     void Modify_pointset(Grid G,Lorenz3D Lor);
     void RHS_P(Grid G,Lorenz3D Lor);
     bool no_neighbors(Grid G, Lorenz3D Lor, int l);
-    void Record_Data(string file_name, Grid G);
+    void Record_Data(std::string file_name, Grid G);
+    void Record_All_Data(std::string file_name, Grid G);
 };
 
 /*==============================================================================
@@ -90,7 +88,7 @@ int state_conversion(int state[], Grid G){
 
 double MC(double th){
     double phi;
-    phi = max(0.0,min({(1+th)/2,2.0,2*th}));
+    phi = std::max(0.0,std::min({(1+th)/2,2.0,2*th}));
     return phi;
 };
 /*==============================================================================
@@ -104,13 +102,14 @@ void HGBEES::Initialize_D(Grid G,Lorenz3D Lor){
     for (int i = round((G.start[0]-2)/G.del); i <= round((G.start[0]+2)/G.del); i++){
         for (int j = round((G.start[1]-2)/G.del); j <= round((G.start[1]+2)/G.del); j++){
             for (int k = round((G.start[2]-2)/G.del); k <= round((G.start[2]+2)/G.del); k++){
-                int current_state[] = {i,j,k}; int key = state_conversion(current_state,G);
+                int current_state[] = {i,j,k}; int key = state_conversion(current_state,G); 
                 double x = pow(i*G.del - G.start[0],2)+pow(j*G.del - G.start[1],2)+pow(k*G.del - G.start[2],2);
                 P[key].prob = exp(-4*x/2); P[key].active = 0; 
                 memcpy(P[key].state, current_state, sizeof(current_state));  
             }
         }
     }
+
     Initialize_vuw(G,Lor); 
 };
 
@@ -128,8 +127,8 @@ void HGBEES::Initialize_vuw(Grid G,Lorenz3D Lor){
             double v2 = -(x[1]+G.xh)-x[0]*x[2];
             double v3 = -Lor.b*(x[2]+G.xh)+x[0]*x[1]-Lor.b*Lor.r; 
             double total_v[] = {v1,v2,v3};
-            double total_u[] = {min(v1,0.0),min(v2,0.0),min(v3,0.0)};
-            double total_w[] = {max(v1,0.0),max(v2,0.0),max(v3,0.0)}; 
+            double total_u[] = {std::min(v1,0.0),std::min(v2,0.0),std::min(v3,0.0)};
+            double total_w[] = {std::max(v1,0.0),std::max(v2,0.0),std::max(v3,0.0)}; 
 
             memcpy(P[current_key].v, total_v, sizeof(total_v));
             memcpy(P[current_key].u, total_u, sizeof(total_u));
@@ -140,71 +139,65 @@ void HGBEES::Initialize_vuw(Grid G,Lorenz3D Lor){
 };
 
 void HGBEES::Modify_pointset(Grid G,Lorenz3D Lor){
-    double prob_sum = 0; int current_key; double current_prob; double current_v[DIM]; int current_state[DIM];
-
-    int big = 0; int small = 0; int n = P.size(); int big_keys[n]; int small_keys[n];
+    double prob_sum = 0; int current_key; double current_prob; double current_v[DIM]; int current_state[DIM];  
+    int n = P.size(); int keys[n]; int count = 0; 
     for (auto it = P.begin(); it != P.end(); it++) {
-        current_key = it->first; 
-        if(P[current_key].prob >= G.thresh){
-            big_keys[big] = current_key;
-            big++;
-        }else{
-            small_keys[small] = current_key;
-            small++;
-        }
+        keys[count] = it->first; 
+        count++;
     }
 
-    for(int l = 0; l < big; l++){   // Check/Create Neighbors of Big Cells
-        current_key = big_keys[l]; current_prob = P[current_key].prob;
-        prob_sum += current_prob; 
+    for(int i = 0; i < n; i++){   // Check/Create Neighbors of Big Cells
+        current_key = keys[i]; current_prob = P[current_key].prob;
+        if(current_prob >= G.thresh){
+            prob_sum += current_prob; 
 
-        memcpy(current_v, P[current_key].v, sizeof(P[current_key].v));
-        memcpy(current_state, P[current_key].state, sizeof(P[current_key].state));
+            memcpy(current_v, P[current_key].v, sizeof(P[current_key].v));
+            memcpy(current_state, P[current_key].state, sizeof(P[current_key].state));
 
-        int x_c = 0; int y_c = 0; int z_c = 0; 
-        int x_n[DIM]; int y_n[DIM]; int z_n[DIM];
+            int x_c = 0; int y_c = 0; int z_c = 0; 
+            int x_n[DIM]; int y_n[DIM]; int z_n[DIM];
 
-        if(current_v[0] > 0){ //Getting x neighbors
-            x_c = 2; x_n[0] = current_state[0]; x_n[1] = current_state[0]+1;
-        }else if (current_v[0] == 0){
-            x_c = 3; x_n[0] = current_state[0]-1; x_n[1] = current_state[0]; x_n[2] = current_state[0]+1;
-        }else{
-            x_c = 2; x_n[0] = current_state[0]-1; x_n[1] = current_state[0];
-        }
-
-        if(current_v[1] > 0){ //Getting y neighbors
-            y_c = 2; y_n[0] = current_state[1]; y_n[1] = current_state[1]+1;
-        }else if (current_v[1] == 0){
-            y_c = 3; y_n[0] = current_state[1]-1; y_n[1] = current_state[1]; y_n[2] = current_state[1]+1;
-        }else{
-            y_c = 2; y_n[0] = current_state[1]-1; y_n[1] = current_state[1];
-        }
-
-        if(current_v[2] > 0){ //Getting z neighbors
-            z_c = 2; z_n[0] = current_state[2]; z_n[1] = current_state[2]+1;
-        }else if (current_v[2] == 0){
-            z_c = 3; z_n[0] = current_state[2]-1; z_n[1] = current_state[2]; z_n[2] = current_state[2]+1;
-        }else{
-            z_c = 2; z_n[0] = current_state[2]-1; z_n[1] = current_state[2];
-        }
-
-        for (int i = 0; i < x_c; i++){
-            for (int j = 0; j < y_c; j++){
-                for (int k = 0; k < z_c; k++){
-                    int new_state[] = {x_n[i], y_n[j], z_n[k]}; int new_key = state_conversion(new_state,G);
-                    if(!P.count(new_key)){
-                        P[new_key].prob = 0; P[new_key].active = 0; 
-                        memcpy(P[new_key].state, new_state, sizeof(new_state));
-                    }                       
-                }
+            if(current_v[0] > 0){ //Getting x neighbors
+                x_c = 2; x_n[0] = current_state[0]; x_n[1] = current_state[0]+1;
+            }else if (current_v[0] == 0){
+                x_c = 3; x_n[0] = current_state[0]-1; x_n[1] = current_state[0]; x_n[2] = current_state[0]+1;
+            }else{
+                x_c = 2; x_n[0] = current_state[0]-1; x_n[1] = current_state[0];
             }
-        }               
-        
+
+            if(current_v[1] > 0){ //Getting y neighbors
+                y_c = 2; y_n[0] = current_state[1]; y_n[1] = current_state[1]+1;
+            }else if (current_v[1] == 0){
+                y_c = 3; y_n[0] = current_state[1]-1; y_n[1] = current_state[1]; y_n[2] = current_state[1]+1;
+            }else{
+                y_c = 2; y_n[0] = current_state[1]-1; y_n[1] = current_state[1];
+            }
+
+            if(current_v[2] > 0){ //Getting z neighbors
+                z_c = 2; z_n[0] = current_state[2]; z_n[1] = current_state[2]+1;
+            }else if (current_v[2] == 0){
+                z_c = 3; z_n[0] = current_state[2]-1; z_n[1] = current_state[2]; z_n[2] = current_state[2]+1;
+            }else{
+                z_c = 2; z_n[0] = current_state[2]-1; z_n[1] = current_state[2];
+            }
+
+            for (int i = 0; i < x_c; i++){
+                for (int j = 0; j < y_c; j++){
+                    for (int k = 0; k < z_c; k++){
+                        int new_state[] = {x_n[i], y_n[j], z_n[k]}; int new_key = state_conversion(new_state,G);
+                        if(!P.count(new_key)){
+                            P[new_key].prob = 0; P[new_key].active = 0; 
+                            memcpy(P[new_key].state, new_state, sizeof(new_state));
+                        }                       
+                    }
+                }
+            }               
+        }
     }   
 
-    for (int l = 0; l < small; l++){     // Remove small cells that do not neighbor big cells
-        int current_key = small_keys[l];
-        if(current_key!=-1){
+    for (int l = 0; l < n; l++){     // Remove small cells that do not neighbor big cells
+        int current_key = keys[l];
+        if((P[current_key].prob < G.thresh)&&(P[current_key].active == 1)){
             if (no_neighbors(G,Lor,current_key)){
                 P.erase(current_key);
             }
@@ -236,11 +229,11 @@ void HGBEES::RHS_P(Grid G,Lorenz3D Lor){
         }
     }
 
-    for(int q = 0; q < G.d; q++){
-        for(auto it = P.begin(); it != P.end(); it++){ // Calculating Total f
-            int l_key = it->first; 
-            if(l_key != -1){
-                memcpy(l_state, P[l_key].state, sizeof(P[l_key].state)); 
+    for(auto it = P.begin(); it != P.end(); it++){ // Calculating Total f
+        int l_key = it->first; 
+        if(l_key != -1){
+            memcpy(l_state, P[l_key].state, sizeof(P[l_key].state)); 
+            for(int q = 0; q < G.d; q++){
                 memcpy(i_state, l_state, sizeof(l_state)); i_state[q] = i_state[q]-1; 
                 int i_key = state_conversion(i_state,G);
                 if(P.count(i_key)==0) i_key = -1; 
@@ -282,6 +275,8 @@ void HGBEES::RHS_P(Grid G,Lorenz3D Lor){
                 }
             }
         }
+
+        //std::cout << "KEY:" << l_key << " f: (" << P[l_key].f[0] << " " << P[l_key].f[1] << " " << P[l_key].f[2] << ")" << std::endl;
     }
     for(auto it = P.begin(); it != P.end(); it++){
         int l_key = it->first; 
@@ -315,16 +310,15 @@ bool HGBEES::no_neighbors(Grid G, Lorenz3D Lor, int current_key){
     return neighbors;
 };
 
-void HGBEES::Record_Data(string file_name, Grid G){
-	ofstream myfile; myfile.open(file_name);
+void HGBEES::Record_Data(std::string file_name, Grid G){
+	std::ofstream myfile; myfile.open(file_name);
     for(auto it = P.begin(); it != P.end(); it++){
         int key = it->first; 
-        if (P[key].prob >= G.thresh){
-            myfile << P[key].prob << " " << P[key].state[0] << " " << P[key].state[1] << " " << P[key].state[2] << endl;
+        if ((P[key].prob >= G.thresh)&&(key != -1)){
+            myfile << P[key].prob << " " << P[key].state[0] << " " << P[key].state[1] << " " << P[key].state[2] << std::endl;
         }
     }  
     myfile.close();
 };
-
 
 #endif // HGBEES_H

@@ -5,9 +5,9 @@ MAIN.CPP
 ==============================================================================*/
 #include "HGBEES.h"
 
-int main() {
+int main(){
 
-    cout << "Initializing Grid and Trajectory..." << endl; 
+    std::cout << "Initializing Grid and Trajectory..." << std::endl; 
     //=========================== Begin User Input =============================
     int T = 1; Grid G; G.thresh = 0.00002; G.dt = 0.0005; G.d = 3;
     double start[] = {-11.5, -10, 9.5}; G.start = start; G.del = 0.4; G.xh = G.del/2; 
@@ -15,13 +15,13 @@ int main() {
     //============================ End User Input ==============================
     HGBEES D;
 
-    cout << "Initializing Distribution..." << endl; 
+    std::cout << "Initializing Distribution..." << std::endl; 
     
     D.Initialize_D(G,Lor); D.Modify_pointset(G,Lor); D.Record_Data("pdf_0.txt", G);
-
-    cout << "Entering Time-marching scheme..." << endl; 
-
-    for (int i = 1; i <= 2000; i++){
+    
+    std::cout << "Entering Time-marching scheme..." << std::endl; 
+    
+    for (int i = 1; i <= 400; i++){
         D.Modify_pointset(G,Lor); D.RHS_P(G, Lor);  
 
         int current_key; 
@@ -33,10 +33,10 @@ int main() {
         }  
 
         if (i % 400 == 0){ 
-            cout << "Timestep: " << i << endl; 
-            string filename = "pdf_" + to_string(i) + ".txt"; D.Record_Data(filename, G);
+            std::cout << "Timestep: " << i << std::endl; 
+            std::string filename = "pdf_" + std::to_string(i) + ".txt"; D.Record_Data(filename, G);
         }
     }    
-
+    
     return 0;
 }

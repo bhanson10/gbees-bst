@@ -1,7 +1,7 @@
-state = [20950 5 5],
+state = [-25 -19 23],
 G.d = length(state);
 key = state_conversion(state,G),
-state = key_conversion(key,G),
+state = key_conversion(6674077,G),
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function key = state_conversion(state,G)
     shift_state = ShiftState(state,G.d),
