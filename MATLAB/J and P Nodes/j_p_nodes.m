@@ -1,5 +1,5 @@
 clearvars
-state = [1 1 1 1]; d = length(state); 
+state = [0 0 0]; d = length(state); 
 
 for q=1:d
     i_state = state; i_state(q) = i_state(q)-1; i_nodes(1,q) = state2str(i_state);
@@ -41,14 +41,6 @@ function string = state2str(state)
         else
             string = string + num2str(state(i)) + ", ";
         end
-    end
-end
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function val = map(x,y)
-    if (x >= y)
-        val = 2^x + 3^y;
-    else
-        val = 2^y + 3^x;
     end
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

@@ -1,4 +1,4 @@
-function D = gbees                                   % GBEES code base 
+ function D = gbees                                   % GBEES code base 
 %%%%%%%%%%%%%%%%% begin user input %%%%%%%%%%%%%%%% 
 T=1; G.thresh=0.00002; G.max=10000; start=[-11.5; -10; 9.5]; 
 G.dt=.0005; dt=.005; G.dx=0.4; G.d=3; G.sigma=4; G.b=1; G.r=48; G.L=30;

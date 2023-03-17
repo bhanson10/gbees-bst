@@ -21,10 +21,12 @@ int main()
     TreeNode* test = P.recursiveSearch(P.root, 2);
     cout << test->key << endl; 
     cout << test->cell.prob << endl;
+    P.print2D(P.root, 1);
 
-    P.root->right->right->cell.prob = 10; 
+    P.root = P.balance(P.root);
     cout << test->key << endl; 
     cout << test->cell.prob << endl;
+    P.print2D(P.root, 1);
     
     /*
     cout << "--------------------------------------------" << endl; 

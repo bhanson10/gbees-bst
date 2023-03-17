@@ -51,7 +51,6 @@ class HGBEES{       // HGBEES Class
     void RHS_P(Grid G,Lorenz3D Lor);
     bool no_neighbors(Grid G, Lorenz3D Lor, int l);
     void Record_Data(std::string file_name, Grid G);
-    void Record_All_Data(std::string file_name, Grid G);
 };
 
 /*==============================================================================
@@ -275,8 +274,6 @@ void HGBEES::RHS_P(Grid G,Lorenz3D Lor){
                 }
             }
         }
-
-        //std::cout << "KEY:" << l_key << " f: (" << P[l_key].f[0] << " " << P[l_key].f[1] << " " << P[l_key].f[2] << ")" << std::endl;
     }
     for(auto it = P.begin(); it != P.end(); it++){
         int l_key = it->first; 
