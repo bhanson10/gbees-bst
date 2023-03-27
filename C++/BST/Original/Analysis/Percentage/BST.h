@@ -38,6 +38,7 @@ class Grid{ // Properties of the grid
     double thresh;        
     std::array<double,DIM> start;
     std::array<double,DIM> std;
+    double T;
     double dt;
     std::array<double, DIM> del;
     std::array<double, DIM> xh;

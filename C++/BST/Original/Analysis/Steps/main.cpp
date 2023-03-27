@@ -13,9 +13,9 @@ int main() {
     Lorenz3D Lor; Lor.sigma = 4; Lor.b = 1; Lor.r = 48; 
     int num_step = round(G.T/G.dt);
     //====================================== End User Input =======================================
-    const int MAX_STEPS = 25; 
-    const int START_STEPS = 1; 
-    const int DEL_STEPS = 1; 
+    const int MAX_STEPS = 39; 
+    const int START_STEPS = 25; 
+    const int DEL_STEPS = 2; 
     const int ITERATIONS = 3; 
     const int LENGTH = ((MAX_STEPS-START_STEPS)/DEL_STEPS)+1;
     int count = 0; std::array<double, LENGTH> time; 
@@ -49,10 +49,12 @@ int main() {
     }
 
 
-    std::ofstream myfile; myfile.open("time_vs_steps2.txt");
+    std::ofstream myfile; myfile.open("time_vs_steps3.txt");
 
-    for (int a = 0; a < LENGTH; a++){
-        myfile << (a+1)*5 << " " << time[a] << std::endl;
+    count = 0; 
+    for (int a = START_STEPS; a <= MAX_STEPS; a+=DEL_STEPS){
+        myfile << a << " " << time[count] << std::endl;
+        count++; 
     }
 
     myfile.close(); 

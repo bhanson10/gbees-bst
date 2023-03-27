@@ -28,8 +28,7 @@ class Cell{  // Cell - data connected to a given cell
         std::array <int, DIM> state; 
         std::array<TreeNode*, DIM> i_nodes; 
         std::array<TreeNode*, DIM> k_nodes; 
-        int status1; 
-        int status2; 
+        int active; 
         double K; 
 };
 
@@ -250,9 +249,21 @@ void BST::writeFile(std::ofstream& myfile, Grid G, TreeNode* r){
     writeFile(myfile, G, r->left);
     writeFile(myfile, G, r->right);
 
+    myfile << r->cell.prob << " " << r->cell.state[0] << " " << r->cell.state[1] << " " << r->cell.state[2] << " " << r->cell.K << std::endl;
+};
+
+/*
+void BST::writeFile(std::ofstream& myfile, Grid G, TreeNode* r){
+    if (r == NULL){
+        return; 
+    }
+
+    writeFile(myfile, G, r->left);
+    writeFile(myfile, G, r->right);
+
     if (r->cell.prob >= G.thresh){
         myfile << r->cell.prob << " " << r->cell.state[0] << " " << r->cell.state[1] << " " << r->cell.state[2] << std::endl;
     }
 };
-
+*/
 #endif // BST_h

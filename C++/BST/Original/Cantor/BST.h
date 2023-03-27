@@ -28,7 +28,8 @@ class Cell{  // Cell - data connected to a given cell
         std::array <int, DIM> state; 
         std::array<TreeNode*, DIM> i_nodes; 
         std::array<TreeNode*, DIM> k_nodes; 
-        int active; 
+        int status1; 
+        int status2; 
         double K; 
 };
 
@@ -37,6 +38,7 @@ class Grid{ // Properties of the grid
     double thresh;        
     std::array<double,DIM> start;
     std::array<double,DIM> std;
+    double T;
     double dt;
     std::array<double, DIM> del;
     std::array<double, DIM> xh;
@@ -74,6 +76,11 @@ class BST{ // Binary Search Tree - data structure storing information
         int active_size(TreeNode* r, Grid G);
 };
 
+class Measurement{
+    public: 
+        std::array<double, DIM> mean = {0};
+        std::array<double, DIM> unc = {0}; 
+};
 /*==============================================================================
 FUNCTION DEFINITIONS
 ==============================================================================*/
@@ -249,21 +256,9 @@ void BST::writeFile(std::ofstream& myfile, Grid G, TreeNode* r){
     writeFile(myfile, G, r->left);
     writeFile(myfile, G, r->right);
 
-    myfile << r->cell.prob << " " << r->cell.state[0] << " " << r->cell.state[1] << " " << r->cell.state[2] << " " << r->cell.K << std::endl;
-};
-
-/*
-void BST::writeFile(std::ofstream& myfile, Grid G, TreeNode* r){
-    if (r == NULL){
-        return; 
-    }
-
-    writeFile(myfile, G, r->left);
-    writeFile(myfile, G, r->right);
-
     if (r->cell.prob >= G.thresh){
         myfile << r->cell.prob << " " << r->cell.state[0] << " " << r->cell.state[1] << " " << r->cell.state[2] << std::endl;
     }
 };
-*/
+
 #endif // BST_h

@@ -10,13 +10,14 @@ class Lorenz3D{ // Properties of the trajectory
     int sigma;        
     int b;
     int r;
-    int L;
 };
 
 class GBEES{       // HGBEES Class
   public:
     BST P;
     TreeNode* dead; 
+    int a_count = 0; 
+    int tot_count = 1; 
 
     void Initialize_D(Grid G,Lorenz3D Lor);
     void Initialize_vuw(Grid G,Lorenz3D Lor, TreeNode* r);
@@ -29,6 +30,7 @@ class GBEES{       // HGBEES Class
     void initial_f(Grid G, TreeNode* r); 
     void total_f(Grid G, TreeNode* r); 
     void calculating_K(Grid G, TreeNode* r);
+    void update_prob(Grid G, TreeNode* r, int& a_count, int& tot_count); 
     void Record_Data(std::string file_name, Grid G, TreeNode* r);
 };
 /*==============================================================================
@@ -97,6 +99,7 @@ void GBEES::Initialize_D(Grid G,Lorenz3D Lor){
             }
         }
     }
+
 
     Initialize_vuw(G,Lor,P.root);
     Initialize_ik_nodes(G,P.root); 
@@ -355,7 +358,23 @@ void GBEES::calculating_K(Grid G, TreeNode* r){
         for(int q = 0; q < DIM; q++){
             r->cell.K -= (r->cell.f[q]-r->cell.i_nodes[q]->cell.f[q])/G.del[q];  
         }
+    }
+};
+
+void GBEES::update_prob(Grid G, TreeNode* r, int& a_count, int& tot_count){
+    if (r == NULL){
+        return; 
+    }
+
+    update_prob(G, r->left, a_count, tot_count);
+    update_prob(G, r->right, a_count, tot_count);
+    
+    if(r->key != -1){
         r->cell.prob += G.dt*r->cell.K; 
+        tot_count += 1; 
+        if(r->cell.prob >= G.thresh){
+            a_count += 1; 
+        }
     }
 };
 

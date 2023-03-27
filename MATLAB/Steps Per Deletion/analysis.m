@@ -1,4 +1,4 @@
-file = "time_vs_steps.txt";
+file = "time_vs_steps2.txt";
 blob_ID = fopen(file, 'r'); blob = fscanf(blob_ID, '%f', [2 inf]);
 step = blob(1,:); time = blob(2,:); 
 
