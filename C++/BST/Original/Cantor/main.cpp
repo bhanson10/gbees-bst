@@ -11,8 +11,8 @@ int main() {
     //===================================== Begin User Input ======================================
     Grid G; G.T = 1; G.thresh = 0.00002; G.dt = 0.0005; G.start = {-11.5, -10, 9.5}; G.std = {1.0, 1.0, 1.0}; 
     G.del = {0.5,0.5,0.5}; G.xh = {G.del[0]/2, G.del[1]/2, G.del[2]/2}; 
-    Lorenz3D Lor; Lor.sigma = 4; Lor.b = 1; Lor.r = 48; double per_cutoff = 42; int num_meas = 2; 
-    int num_step = round(G.T/G.dt); int record_step = round(G.T/(5*G.dt)); int del_step = 17; 
+    Lorenz3D Lor; Lor.sigma = 4; Lor.b = 1; Lor.r = 48; double per_cutoff = 42; int num_meas = 1; 
+    int num_step = round(G.T/G.dt); int record_step = round(G.T/(5*G.dt)); int del_step = 35; 
     //====================================== End User Input =======================================
     GBEES D;
 

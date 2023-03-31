@@ -14,10 +14,10 @@ int main() {
     Lorenz3D Lor; Lor.sigma = 4; Lor.b = 1; Lor.r = 48; 
     int num_step = round(G.T/G.dt); 
     //====================================== End User Input =======================================
-    const int MAX_PER = 60; 
-    const int START_PER = 30; 
-    const int DEL_PER = 2; 
-    const int ITERATIONS = 3; 
+    const int MAX_PER = 100; 
+    const int START_PER = 1; 
+    const int DEL_PER = 3; 
+    const int ITERATIONS = 1; 
     const int LENGTH = ((MAX_PER-START_PER)/DEL_PER)+1;
     int count = 0; std::array<double, LENGTH> time; 
     

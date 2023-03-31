@@ -80,7 +80,7 @@ Member Function DEFINITIONS
 ==============================================================================*/
 void GBEES::Initialize_D(Grid G,Lorenz3D Lor){
     Cell blank_c = {.prob = 0, .vp = {0}, .up = {0}, .wp = {0}, .vm = {0}, .um = {0}, .wm = {0}, .f = {0}, .status1 = -1, .status2 = -1, .K = 0};
-    TreeNode* dead_node = new TreeNode(-1, blank_c); P.root = P.insertRecursive(P.root, dead_node);
+    TreeNode* dead_node = new TreeNode(-1, blank_c); dead_node->cell.i_nodes = {dead_node, dead_node, dead_node}; dead_node->cell.k_nodes = {dead_node, dead_node, dead_node};
     dead = dead_node; 
 
     std::array<int,DIM> current_state; int key; 
@@ -185,36 +185,45 @@ TreeNode* GBEES::create_neighbors(Grid G, TreeNode* r, double& prob_sum){
 
     if (r->cell.prob >= G.thresh){
         prob_sum += r->cell.prob; 
-        std::array<double,DIM> current_v = r->cell.vp; std::array<int,DIM> current_state = r->cell.state;    
-        
-        std::array<int,DIM> num_n; std::array<std::array<int,DIM>,DIM> which_n;  
-
-        for(int c = 0; c < DIM; c++){
-            if(current_v[c] > 0){
-                num_n[c] = 2; 
-                which_n[c][0] = current_state[c]; which_n[c][1] = current_state[c]+1;
-            }else if(current_v[c]==0){
-                num_n[c] = 3; 
-                which_n[c][0] = current_state[c]-1; which_n[c][1] = current_state[c]; which_n[c][2] = current_state[c]+1;
-            }else{
-                num_n[c] = 2;
-                which_n[c][0] = current_state[c]-1; which_n[c][1] = current_state[c];
+        bool outisder = false; 
+        for(int i = 0; i < DIM; i++){
+            if ((r->cell.i_nodes[i]==dead)||(r->cell.k_nodes[i]==dead)){
+                outisder = true; 
             }
-        }
+        };
 
-        for (int i = 0; i < num_n[0]; i++){
-            for (int j = 0; j < num_n[1]; j++){
-                for (int k = 0; k < num_n[2]; k++){
-                    std::array<int,DIM> new_state = {which_n[0][i], which_n[1][j], which_n[2][k]}; int new_key = state_conversion(new_state);
-                    TreeNode* test_node = P.recursiveSearch(P.root, new_key); 
-                    if(test_node == NULL){
-                        Cell c = {.prob = 0, .vp = {0}, .up = {0}, .wp = {0}, .vm = {0}, .um = {0}, .wm = {0}, .f = {0}, .state = new_state, .status1 = 0, .status2 = 0, .K = 0};
-                        TreeNode* new_node = new TreeNode(new_key, c);
-                        P.root = P.insertRecursive(P.root, new_node); 
-                    }                       
+        if(outisder == true){
+            std::array<double,DIM> current_v = r->cell.vp; std::array<int,DIM> current_state = r->cell.state;    
+            
+            std::array<int,DIM> num_n; std::array<std::array<int,DIM>,DIM> which_n;  
+
+            for(int c = 0; c < DIM; c++){
+                if(current_v[c] > 0){
+                    num_n[c] = 2; 
+                    which_n[c][0] = current_state[c]; which_n[c][1] = current_state[c]+1;
+                }else if(current_v[c]==0){
+                    num_n[c] = 3; 
+                    which_n[c][0] = current_state[c]-1; which_n[c][1] = current_state[c]; which_n[c][2] = current_state[c]+1;
+                }else{
+                    num_n[c] = 2;
+                    which_n[c][0] = current_state[c]-1; which_n[c][1] = current_state[c];
                 }
             }
-        }       
+
+            for (int i = 0; i < num_n[0]; i++){
+                for (int j = 0; j < num_n[1]; j++){
+                    for (int k = 0; k < num_n[2]; k++){
+                        std::array<int,DIM> new_state = {which_n[0][i], which_n[1][j], which_n[2][k]}; int new_key = state_conversion(new_state);
+                        TreeNode* test_node = P.recursiveSearch(P.root, new_key); 
+                        if(test_node == NULL){
+                            Cell c = {.prob = 0, .vp = {0}, .up = {0}, .wp = {0}, .vm = {0}, .um = {0}, .wm = {0}, .f = {0}, .state = new_state, .status1 = 0, .status2 = 0, .K = 0};
+                            TreeNode* new_node = new TreeNode(new_key, c);
+                            P.root = P.insertRecursive(P.root, new_node); 
+                        }                       
+                    }
+                }
+            }    
+        }   
     }
     return P.root; 
 };
@@ -316,12 +325,8 @@ void GBEES::total_f(Grid G, TreeNode* r){
                 double F = G.dt*(r->cell.prob-i_node->cell.prob)/(2*G.del[q]); 
                 for(int e = 0; e < DIM; e++){
                     if (e!=q){
-                        TreeNode* j_node = r->cell.i_nodes[e]; TreeNode* p_node; 
-                        if (i_node != dead){
-                            p_node = i_node->cell.i_nodes[e]; 
-                        }else{
-                            p_node = dead; 
-                        }
+                        TreeNode* j_node = r->cell.i_nodes[e]; 
+                        TreeNode* p_node = i_node->cell.i_nodes[e]; 
                         
                         r->cell.f[e] -= r->cell.wp[e] * i_node->cell.wp[q] * F;
                         i_node->cell.f[e] -= i_node->cell.wp[e] * i_node->cell.up[q] * F;

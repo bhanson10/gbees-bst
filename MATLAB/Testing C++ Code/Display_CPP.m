@@ -10,6 +10,7 @@ end
 plot3(ys(1,:),ys(2,:),ys(3,:),'g-','linewidth',1); view(-109,14);  hold on;
 lighting phong; light('Position',[-1 0 0]); drawnow;
 
+%{
 figure(3); clf; y=G.start; ys=y; 
 for timestep=1:10000
   k1=RHS(y,G); k2=RHS(y+(dt/2)*k1,G); k3=RHS(y+(dt/2)*k2,G); k4=RHS(y+dt*k3,G);    
@@ -17,8 +18,8 @@ for timestep=1:10000
 end
 plot3(ys(1,:),ys(2,:),ys(3,:),'g-','linewidth',1); view(-109,14);  hold on;
 lighting phong; light('Position',[-1 0 0]); drawnow;
+%}
 
-%{
 figure(2); clf; y=G.start; ys=y; 
 for timestep=1:T/dt
   k1=RHS(y,G); k2=RHS(y+(dt/2)*k1,G); k3=RHS(y+(dt/2)*k2,G); k4=RHS(y+dt*k3,G);    
@@ -40,7 +41,7 @@ for P=1:100; y=G.start+0.5*randn(3,1); ys=y;
   plot3(ys(1,121),ys(2,121),ys(3,121),'k+'); plot3(ys(1,161),ys(2,161),ys(3,161),'k+');
   drawnow;
 end
-
+%{
 figure(4); clf; y=G.start; ys=y; 
 for timestep=1:T/dt
   k1=RHS(y,G); k2=RHS(y+(dt/2)*k1,G); k3=RHS(y+(dt/2)*k2,G); k4=RHS(y+dt*k3,G);    
@@ -64,18 +65,21 @@ for P=1:100; y=G.start+0.5*randn(3,1); ys=y;
 end
 %}
 for i=0:5
+    %file = "cpp_sim_data_v7_" + string(i) + ".txt"; 
     file = "pdf_0-" + string(i*400) + ".txt";
     blob_ID = fopen(file, 'r'); blob = fscanf(blob_ID, '%f', [4 inf]);
     D.P = blob(1,:); D.j = blob(2:4,:)'; D.n = length(D.P);
     Rotate_Plot(D,G,1);
 end
 
+%{
 for i=0:2
     file = "pdf_1-" + string(i*400) + ".txt";
     blob_ID = fopen(file, 'r'); blob = fscanf(blob_ID, '%f', [4 inf]);
     D.P = blob(1,:); D.j = blob(2:4,:)'; D.n = length(D.P);
     Rotate_Plot(D,G,3);
 end
+%}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %                                     FUNCTIONS
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -99,7 +103,6 @@ end
 axis([-G.L G.L -G.L G.L -G.L G.L]);
 drawnow;
 
-%{
 figure(n+1)
 isosurface([-G.L:G.dx:G.L],[-G.L:G.dx:G.L],[-G.L:G.dx:G.L],Pfull,0.0001); alpha(.5),
 if(n==1)
@@ -109,6 +112,6 @@ else
 end
 axis([-G.L G.L -G.L G.L -G.L G.L])
 drawnow;
-%}
+
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
