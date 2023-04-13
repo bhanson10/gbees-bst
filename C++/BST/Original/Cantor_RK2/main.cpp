@@ -9,10 +9,10 @@ int main() {
 
     std::cout << "Initializing Grid and Trajectory..." << std::endl; 
     //===================================== Begin User Input ======================================
-    Grid G; G.T = 1; G.thresh = 0.00002; G.dt = 0.001; G.start = {-11.5, -10, 9.5}; G.std = {1.0, 1.0, 1.0}; 
+    Grid G; G.T = 1; G.thresh = 0.00002; G.dt = 0.001; G.epoch = {-11.5, -10, 9.5}; G.std = {1.0, 1.0, 1.0}; 
     G.del = {0.5,0.5,0.5}; G.xh = {G.del[0]/2, G.del[1]/2, G.del[2]/2}; 
     Lorenz3D Lor; Lor.sigma = 4; Lor.b = 1; Lor.r = 48; double per_cutoff = 42; int num_meas = 1; 
-    int num_step = round(G.T/G.dt); int record_step = round(G.T/(5*G.dt)); int del_step = 17; 
+    int num_step = round(G.T/G.dt); int record_step = round(G.T/(5*G.dt)); int del_step = 26; 
     //====================================== End User Input =======================================
     GBEES D;
 
@@ -29,7 +29,7 @@ int main() {
     
     for(int nm = 0; nm < num_meas; nm++){
         auto finish = std::chrono::high_resolution_clock::now(); elapsed = finish - start; 
-        std::string filename = "pdf_" + std::to_string(nm) + "-0.txt"; D.Record_Data(filename, G, D.P.root);
+        std::string filename = "pdf_" + std::to_string(nm) + "-0.txt";
         D.Modify_pointset(G,Lor); D.Record_Data(filename, G, D.P.root); D.get_size(G, D.P.root, D.a_count, D.tot_count); 
         std::cout << "Timestep: " << nm << "-0, Program time: " << elapsed.count() << " s, Sim. time: " << sim_time << " s, Active/Total Cells: " << D.a_count << "/" << D.tot_count << std::endl;
         D.a_count = 0; D.tot_count = 1; 

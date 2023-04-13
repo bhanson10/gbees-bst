@@ -10,9 +10,9 @@ MAIN.CPP
 #define RECORD_DATA 1 // Record simulation data to text file.
 
 // 1 step = 1 minutes for planetary. Typical LEO orbital period = 1.5 to 2 hrs
-int step_record = 400;         
+int step_record = 4000;         
 int step_measure = 1200000;   // Measurement every orbital period (approx)
-int step_display = 400;
+int step_display = 2000;
 
 string name_ver = "v7";
 

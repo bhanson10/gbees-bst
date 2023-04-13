@@ -15,7 +15,7 @@ int main() {
     //====================================== End User Input =======================================
     const int MAX_STEPS = 501; 
     const int START_STEPS = 1; 
-    const int DEL_STEPS = 10; 
+    const int DEL_STEPS = 5; 
     const int ITERATIONS = 1; 
     const int LENGTH = ((MAX_STEPS-START_STEPS)/DEL_STEPS)+1;
     int count = 0; std::array<double, LENGTH> time; 
@@ -49,7 +49,7 @@ int main() {
     }
 
 
-    std::ofstream myfile; myfile.open("time_vs_steps4.txt");
+    std::ofstream myfile; myfile.open("time_vs_steps.txt");
 
     count = 0; 
     for (int a = START_STEPS; a <= MAX_STEPS; a+=DEL_STEPS){

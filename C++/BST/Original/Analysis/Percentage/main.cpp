@@ -14,8 +14,8 @@ int main() {
     Lorenz3D Lor; Lor.sigma = 4; Lor.b = 1; Lor.r = 48; 
     int num_step = round(G.T/G.dt); 
     //====================================== End User Input =======================================
-    const int MAX_PER = 100; 
-    const int START_PER = 1; 
+    const int MAX_PER = 85; 
+    const int START_PER = 85; 
     const int DEL_PER = 3; 
     const int ITERATIONS = 1; 
     const int LENGTH = ((MAX_PER-START_PER)/DEL_PER)+1;
@@ -50,6 +50,7 @@ int main() {
         std::cout << std::endl; 
     }
 
+    /*
     std::ofstream myfile; myfile.open("time_vs_per.txt");
 
     count = 0; 
@@ -59,6 +60,6 @@ int main() {
     }
 
     myfile.close(); 
-        
+    */
     return 0;
 }

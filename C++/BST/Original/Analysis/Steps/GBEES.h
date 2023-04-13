@@ -183,45 +183,60 @@ TreeNode* GBEES::create_neighbors(Grid G, TreeNode* r, double& prob_sum){
 
     if (r->cell.prob >= G.thresh){
         prob_sum += r->cell.prob; 
-        bool outisder = false; 
+        bool outsider = false; 
         for(int i = 0; i < DIM; i++){
             if ((r->cell.i_nodes[i]==dead)||(r->cell.k_nodes[i]==dead)){
-                outisder = true; 
+                outsider = true; 
             }
         };
 
-        if(outisder == true){
+        if(outsider == true){
             std::array<double,DIM> current_v = r->cell.vp; std::array<int,DIM> current_state = r->cell.state;    
             
-            std::array<int,DIM> num_n; std::array<std::array<int,DIM>,DIM> which_n;  
+            std::array<std::array<int,2>,DIM> n_states;  
 
             for(int c = 0; c < DIM; c++){
                 if(current_v[c] > 0){
-                    num_n[c] = 2; 
-                    which_n[c][0] = current_state[c]; which_n[c][1] = current_state[c]+1;
+                    n_states[c][0] = 0; n_states[c][1] = 1;
                 }else if(current_v[c]==0){
-                    num_n[c] = 3; 
-                    which_n[c][0] = current_state[c]-1; which_n[c][1] = current_state[c]; which_n[c][2] = current_state[c]+1;
+                    n_states[c][0] = -1; n_states[c][1] = 1;
                 }else{
-                    num_n[c] = 2;
-                    which_n[c][0] = current_state[c]-1; which_n[c][1] = current_state[c];
+                    n_states[c][0] = -1; n_states[c][1] = 0;
                 }
             }
 
-            for (int i = 0; i < num_n[0]; i++){
-                for (int j = 0; j < num_n[1]; j++){
-                    for (int k = 0; k < num_n[2]; k++){
-                        std::array<int,DIM> new_state = {which_n[0][i], which_n[1][j], which_n[2][k]}; int new_key = state_conversion(new_state);
-                        TreeNode* test_node = P.recursiveSearch(P.root, new_key); 
-                        if(test_node == NULL){
-                            Cell c = {.prob = 0, .vp = {0}, .up = {0}, .wp = {0}, .vm = {0}, .um = {0}, .wm = {0}, .f = {0}, .state = new_state, .status1 = 0, .status2 = 0, .K = 0};
-                            TreeNode* new_node = new TreeNode(new_key, c);
-                            P.root = P.insertRecursive(P.root, new_node); 
-                        }                       
+            for (int i = n_states[0][0]; i <= n_states[0][1]; i++){
+                for (int j = n_states[1][0]; j <= n_states[1][1]; j++){
+                    for (int k = n_states[2][0]; k <= n_states[2][1]; k++){
+                        std::array<int,DIM> state_update = {i, j, k}; 
+                        
+                        TreeNode* neighbor_node = r;
+                        for (int l = 0; l < DIM; l++){
+                            if(state_update[l] == 1){
+                                neighbor_node = neighbor_node->cell.k_nodes[l];
+                            }else if (state_update[l] == -1){
+                                neighbor_node = neighbor_node->cell.i_nodes[l];
+                            }
+
+                            if(neighbor_node == dead){
+                                std::array<int,DIM> new_state = current_state; 
+                                for(int m = 0; m < DIM; m++){
+                                    new_state[m] += state_update[m]; 
+                                }
+                                int new_key = state_conversion(new_state);
+                                TreeNode* test_node = P.recursiveSearch(P.root, new_key); 
+                                if(test_node == NULL){
+                                    Cell c = {.prob = 0, .vp = {0}, .up = {0}, .wp = {0}, .vm = {0}, .um = {0}, .wm = {0}, .f = {0}, .state = new_state, .status1 = 0, .status2 = 0, .K = 0};
+                                    TreeNode* new_node = new TreeNode(new_key, c);
+                                    P.root = P.insertRecursive(P.root, new_node); 
+                                } 
+                                break;      
+                            }
+                        }              
                     }
                 }
-            }   
-        }    
+            }     
+        }  
     }
     return P.root; 
 };

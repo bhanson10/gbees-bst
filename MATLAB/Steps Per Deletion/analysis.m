@@ -9,5 +9,5 @@ xlabel("\% of Inactive Cells before Deletion", 'Interpreter', 'Latex');
 ylabel("Avg. Time per 2000 simualtion steps (s)", 'Interpreter', 'Latex');
 plot(step,time,'--blue');
 scatter(step, time, 'blue','filled'); 
-yline(41.9052, '--', "Nested List Time"); 
+yline(33.77, '--', "Nested List Time"); 
 

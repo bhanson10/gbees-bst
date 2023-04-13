@@ -37,7 +37,7 @@ class Cell{  // Cell - data connected to a given cell
 class Grid{ // Properties of the grid
   public:            
     double thresh;        
-    std::array<double,DIM> start;
+    std::array<double,DIM> epoch;
     std::array<double,DIM> std;
     double T;
     double dt;
@@ -236,7 +236,7 @@ void BST::writeFile(std::ofstream& myfile, Grid G, TreeNode* r){
     writeFile(myfile, G, r->right);
 
     if (r->cell.prob >= G.thresh){
-        myfile << r->cell.prob << " " << r->cell.state[0] << " " << r->cell.state[1] << " " << r->cell.state[2] << std::endl;
+        myfile << r->cell.prob << " " << r->cell.state[0] + (G.epoch[0]/G.del[0]) << " " << r->cell.state[1] + (G.epoch[1]/G.del[1]) << " " << r->cell.state[2] + (G.epoch[2]/G.del[2]) << std::endl;
     }
 };
 
