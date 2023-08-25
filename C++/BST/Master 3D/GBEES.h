@@ -136,20 +136,6 @@ void GBEES::Initialize_vuw(Grid G,Lorenz3D Lor, TreeNode* r){
         }
         
         double v1p = Lor.sigma*(x[1]-(x[0]+G.xh[0]));
-        double v2p = x[0]*(Lor.r-x[2])-(x[1]+G.xh[1]);
-        double v3p = x[0]*x[1]-Lor.b*(x[2]+G.xh[2]); 
-        r->cell.vp = {v1p,v2p,v3p};
-        r->cell.up = {std::min(v1p,0.0),std::min(v2p,0.0),std::min(v3p,0.0)};
-        r->cell.wp = {std::max(v1p,0.0),std::max(v2p,0.0),std::max(v3p,0.0)}; 
-        double v1m = Lor.sigma*(x[1]-(x[0]-G.xh[0]));
-        double v2m = x[0]*(Lor.r-x[2])-(x[1]-G.xh[1]);
-        double v3m = x[0]*x[1]-Lor.b*(x[2]-G.xh[2]); 
-        r->cell.vm = {v1m,v2m,v3m};
-        r->cell.um = {std::min(v1m,0.0),std::min(v2m,0.0),std::min(v3m,0.0)};
-        r->cell.wm = {std::max(v1m,0.0),std::max(v2m,0.0),std::max(v3m,0.0)}; 
-        r->cell.status1 = 1;
-        /*
-        double v1p = Lor.sigma*(x[1]-(x[0]+G.xh[0]));
         double v2p = -(x[1]+G.xh[1])-x[0]*x[2];
         double v3p = -Lor.b*(x[2]+G.xh[2])+x[0]*x[1]-Lor.b*Lor.r; 
         r->cell.vp = {v1p,v2p,v3p};
@@ -162,7 +148,6 @@ void GBEES::Initialize_vuw(Grid G,Lorenz3D Lor, TreeNode* r){
         r->cell.um = {std::min(v1m,0.0),std::min(v2m,0.0),std::min(v3m,0.0)};
         r->cell.wm = {std::max(v1m,0.0),std::max(v2m,0.0),std::max(v3m,0.0)}; 
         r->cell.status1 = 1;
-        */
     }
 };
 

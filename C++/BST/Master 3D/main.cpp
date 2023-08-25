@@ -9,10 +9,10 @@ int main(){
 
     std::cout << "Initializing Grid and Trajectory..." << std::endl; 
     //===================================== Begin User Input ======================================
-    Grid G; G.T = 1; G.thresh = 0.00002; G.dt = 0.00005; G.epoch = {-15, -4.5, 42}; G.std = {1.0, 1.0, 1.0}; 
+    Grid G; G.T = 1; G.thresh = 0.00002; G.dt = 0.0005; G.epoch = {-11.5, -10, 9.5}; G.std = {0.5, 0.5, 0.5}; 
     G.del = {0.5,0.5,0.5}; G.xh = {G.del[0]/2, G.del[1]/2, G.del[2]/2}; G.rk = 1; /*1: EE, 2: RK2, 3: RK3*/
     G.pair = 1; /*1: Cantor, 2: Rosenberg*/ G.del_method = 1; /*1. Steps, 2. %*/
-    Lorenz3D Lor; Lor.sigma = 1; Lor.b = (8/3); Lor.r = 28; double per_cutoff = 42; int num_meas = 1; 
+    Lorenz3D Lor; Lor.sigma = 4; Lor.b = 1; Lor.r = 48; double per_cutoff = 42; int num_meas = 1; 
     int num_step = round(G.T/G.dt); int record_step = round(G.T/(5*G.dt)); int del_step = 26; 
     //====================================== End User Input =======================================
     GBEES D;

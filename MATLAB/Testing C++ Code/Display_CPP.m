@@ -1,6 +1,6 @@
 %%%%%%%%%%%%%%%%% begin user input %%%%%%%%%%%%%%%% 
-T=1; G.thresh=0.00002; G.max=10000; G.start=[-15; -4.5; 42]; 
-G.dt=.00005; dt=.005; G.dx=0.5; G.d=3; G.sigma=10; G.b=(8/3); G.r=28;
+T=1; G.thresh=0.00002; G.max=10000; G.start=[-11.5; -10; 9.5]; G.unc = [0.5; 0.5; 0.5];
+G.dt=.0005; dt=.005; G.dx=0.5; G.d=3; G.sigma=4; G.b=1; G.r=48;
 %%%%%%%%%%%%%%%% end of user input %%%%%%%%%%%%%%%
 figure(1); clf; y=G.start; ys=y; 
 for timestep=1:10000
@@ -30,7 +30,7 @@ plot3(ys(1,:),ys(2,:),ys(3,:),'k-','linewidth',2); view(-109,14);  hold on;
 plot3(ys(1,1),ys(2,1),ys(3,1),'k*'),plot3(ys(1,end),ys(2,end),ys(3,end),'k*');
 lighting phong; light('Position',[-1 0 0]); drawnow;
 
-for P=1:100; y=G.start+0.5*randn(3,1); ys=y;
+for P=1:100; y=[normrnd(G.start(1),G.unc(1)); normrnd(G.start(2),G.unc(2)); normrnd(G.start(3),G.unc(3))]; ys=y;
   for timestep=1:T/G.dt
     k1=RHS(y,G); k2=RHS(y+(G.dt/2)*k1,G); k3=RHS(y+(G.dt/2)*k2,G); k4=RHS(y+G.dt*k3,G);    
     ynew=y+(G.dt/6)*k1+(G.dt/3)*(k2+k3)+(G.dt/6)*k4; ys=[ys ynew]; y=ynew;
@@ -79,8 +79,7 @@ end
 %                                     FUNCTIONS
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function f=RHS(y,G)                          
-    %f=[G.sigma*(y(2)-y(1));  -y(2)-y(1)*y(3);  -G.b*y(3)+y(1)*y(2)-G.b*G.r];
-    f=[G.sigma*(y(2)-y(1));  y(1)*(G.r-y(3))-y(2);  y(1)*y(2)-G.b*y(3)];
+    f=[G.sigma*(y(2)-y(1));  -y(2)-y(1)*y(3);  -G.b*y(3)+y(1)*y(2)-G.b*G.r];
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function Rotate_Plot(D,G,n)        

@@ -14,9 +14,12 @@ print_results(states, keys, n);
 %%%%%%%%%%%%%%%%%%%% Examining every state on a Shell %%%%%%%%%%%%%%%%%%%%%
 
 %%%%%%%%%%%%%%%%%%%%%% Examining Individual States %%%%%%%%%%%%%%%%%%%%%%%%
-state = [4 4 4 4 4 4], % Inputs
+format short; 
+state = [0 109 0 0], % Inputs
 d = length(state);
+format long; 
 key = state_conversion(state,d,1),
+format short; 
 state = key_conversion(key,d,1),
 %%%%%%%%%%%%%%%%%%%%%% Examining Individual States %%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -27,7 +30,7 @@ function key = state_conversion(state,d,shift_status)
     else
         shift_state = state;
     end
-    m = max(shift_state);
+    m = max(shift_state),
     key = RosePair(shift_state,m);
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
