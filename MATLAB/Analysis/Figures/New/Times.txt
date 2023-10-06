@@ -1,3 +1,0 @@
-Total time of GBEES: 4669.7013
-Total time of HBEES1: 12581.8228
-Total time of HGBEES2: 12137.1455
