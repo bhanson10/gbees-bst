@@ -2,7 +2,7 @@
 T=1; G.start=[-11.5; -10; 9.5]; G.unc = [0.5; 0.5; 0.5];
 G.dt=.0005; G.dx=0.5; G.d=3; G.sigma=4; G.b=1; G.r=48;
 %%%%%%%%%%%%%%%% end of user input %%%%%%%%%%%%%%%%%%%%
-DATA_PATH = "/Users/bhanson/Library/CloudStorage/OneDrive-UCSanDiego/UCSD/Research/Bewley/GBEES/GBEES/C++/BST/Master 3D CFL Cell-Centered/Data";
+DATA_PATH = "./BST/Adaptive-time cell-centered/Data";
 fileList = dir(fullfile(DATA_PATH, '*.txt'));  % List only .txt files
 numFiles = numel(fileList);
 
