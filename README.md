@@ -1,76 +1,50 @@
-# GBEES
-The "GBEES" repsository containes the codebase accompying the paper "State Estimation of Chaotic Trajectories: A Higher-Dimensional, Grid-Based, Bayesian Approach to Uncertainty Propagation" presented at the 2024 AIAA/AAS Space Flight Mechanics Meeting. Below is an 
-in-depth summary explaining the proper usage of all the software included in said repository. In all, the codebase provides the 
-computational framework necessary to: <br> <br>
-&ensp; &ensp; &ensp; 1.  <br>
-&ensp; &ensp; &ensp; 2.  <br>
-&ensp; &ensp; &ensp; 3.  <br>
-&ensp; &ensp; &ensp; 4.  <br>
+# Grid-based, Bayesian Estimation Exploiting Sparsity (GBEES)
+The "GBEES" repsository containes the codebase accompying the paper "State Estimation of Chaotic Trajectories: A Higher-Dimensional, Grid-Based, Bayesian Approach to Uncertainty Propagation" presented at the January 2024 AIAA/AAS Space Flight Mechanics Meeting. Below is an in-depth summary explaining the proper usage of all the software included in said repository. In all, the codebase provides the computational framework necessary to: <br> 
+1. Efficiently, continuous-time propagate an initially Gaussian distribution governed by the dynamics of a nonlinear system <br>
+2. Perform discrete measurement updates at given epochs via Bayes theorem <br>
+3. Compare the accuracy of said propagation with a Monte Carlo (MC) simulation of similar resolution <br>
+4. Compare the efficiency of the GBEES propagation with the MC simulation of similar resolution  <br> 
 
-## relaxation_advection.m
-The purpose of _relaxation_advection.m_ is to achieve Objective 1 and 2, generating the relaxation advection field for analytical and numerical PDFs and demonstrating that the relaxation advection field does as it should by driving an arbitrary PDF with it. We begin by generating an initial PDF to use as our test case. The following are possible options for initial PDFs: <br>
+The current framework is applicable to 4D systems, and is specifically utilized to propagate orbital uncertainty in the PCR3BP. Users can use any initial conditions, period, and celestial system as long as the data files are placed in the correct locations (more on this later). 
 
-&ensp; &ensp; &ensp; 1. **Gaussian/super-Gaussians** <br>
-&ensp; &ensp; &ensp; &ensp; - Parameters that may be varied: <br>
-&ensp; &ensp; &ensp; &ensp; &ensp; * _xvbar_: Mean of Gaussian/super-Gaussian <br>
-&ensp; &ensp; &ensp; &ensp; &ensp; * _P_: covariance of Gaussian/super-Gaussian <br>
-&ensp; &ensp; &ensp; &ensp; &ensp; * _s_: order of Gaussian/super-Gaussian ($s>1$ is considered a super-Gaussian in this context)<br>
-&ensp; &ensp; &ensp; 2. **Kidney Bean** <br>
-&ensp; &ensp; &ensp; &ensp; - This PDF is a fairly rigid example, meant to demonstrate a PDF that is shaped like a kidney bean. For this reason, changing the default parameters may cause problems <br>
-&ensp; &ensp; &ensp; 3. **Numerical PDFs** <br>
-&ensp; &ensp; &ensp; &ensp; - This implementation takes a set of data points and creates a PDF out of them via the alpha-convex hull implementation or kernel density estimation. Change the $flag$ parameter to choose between the three provided datasets (information explaining each of the datasets throughouly can be found in the paper) or generate your own dataset via _create_dataset.m_. <br>
+## General Formulation
+There are three provided systems that GBEES is applied to: <br> 
+1. 3D Lorenz Chaotic Attractor <br>
+2. PCR3BP, Jupiter-Europa L<sub>3</sub> Lyapunov orbit <br>
+3. PCR3BP, Sun-Earth L<sub>3</sub> Lyapunov orbit close approach (w/ diffusion) <br> 
 
-Some other paramters that are available for changing are: <br>
-&ensp; &ensp; - _dt_: time step of the simulation <br>
-&ensp; &ensp; - _N_: number of grid cells in one dimension of the $N\times N$ grid <br>
-&ensp; &ensp; - _L_: length and width of the grid <br>
-&ensp; &ensp; - _lambda_: homogenous isotropic diffusion constant, such that $D=\lambda I$ <br><br>
+Each of these systems has their own folder within the GBEES repository. GBEES is propagated via the C++ code _main.cpp_ in the "/GBEES" subfolder within each of these folder. An MC simulation of similar resolution as the GBEES propagation is propagated via the C++ code _main.cpp_ in the "/MC" subfolder. These results are then compared using the _plot_BLANK_m._ MATLAB code. The MATLAB code creates all of the figures from the paper. The _movie_BLANK_m._ stitches together a series of images to create an animation of the PDFs spreading over phase space, and can be created by saving the PDF data at a higher frequency than is defaultly done. <br> 
 
-To choose one of these specific PDF options, comment out the other instances that call new PDFs. Once the initial PDF is chosen, the code generates the relaxation advection field in the $x$ and $y$ directions, each an $N\times N$ grid with the advection value at the grid center. The next step generates a uniform PDF of the same size _PDF_U_ and propagates that PDF using the relaxation advection field and homogeneous isotropic diffusion until convergence (convergence is explain in the paper). The _create_video_ function combines all of the frames generated by the code into a single .MP4.
+Here is a breakdown of all of the subrepositories within each of the three examples provided, as well as their functions: <br>
 
-## non-evasive_search.m
+* '/GBEES/Data': This is where the PDFs that are written to _.txt_ files during GBEES are stored. Each PDF is sequestered into its specific measurement number subrepository, '/M#'. Ensure that the expected number of measurements taken are equal to the number of '/M#' subfolders. The discrete measurement updates are also saved in this file, in the form of a _measurement_BLANK.txt_ file. Update this .txt file with the measurement vector. Additionally, the size of the timesteps taken by the explicit scheme are saved in this folder, under the '/Data/Times' repository. This information is used by the MC simulation, so ensure once your GBEES simulation has run, you copy the times over to the '/MC/Times' file. <br>
+* '/GBEES/Backup Data': This is an exact replica of the '/GBEES/Data' folder, and was utilized during the design phase to ensure that the results of simulations were not overwrote when testing a new implementation of the algorithm. <br>
+* '/GBEES/Movie Data': This is folder has a similar structure to the '/GBEES/Data', but with a more frequent saving procedure of the PDFs. This way, the PDFs can be stitched together via MATLAB to create an animation of the PDF expanding and moving over time. To adjust the frequency of saving the PDF, change the _record_time_ variable in the '/GBEES/main.cpp' file so that it is lower, but still a factor of _measure_time_. Additionally, ensure that the _Record_Data_ function is writing to the correct location by changing the folder to './Movie Data'. <br>
+* '/MC/MC Data': This folder has a similar function as the '/GBEES/Data' folder, but for the MC simulation. Rather than storing a PDF, all of the particles and their current locations at a given epoch are stored in '/MC Data/M#', again where 'M#' is based on what measurement number the simulation is on. The black dots in the figures from the paper that compare the PDFs and the MC simulation come from this folder. <br>
+* '/MC/MC Freq Data': This folder has a similar function as the '/MC/MC Data' folder, but stores the particle locations in phase space at a more frequent rate. This way, the full trajectory may be stored and added to the MC comparison figures, which are the gray lines in the paper. <br>
+* '/Initial Conditions': This folder in thePCR3BP examples contain _.csv_ files pulled from the JPL Three-Body Periodic Orbit catalog which have the initial conditions of the Lyapunov trajectories. <br>
 
-The non-evasive search code demonstrates how the relaxation advection can be used to demonstrate the rate of change of confidence in observations searching for a stationary target in a ROI. For the non-evasive target, we assume that the location of the search vehicles has no impact on the behavior of the target, thus the observations act as negative driving forces that lower the probability at the location of the search vehicle, and the relaxation advection acts as a driving force towards the steady-state. After the observations are done being taken, as $t\rightarrow \infty$ the PDF returns to its steady-state. 
+Here is a breakdown of all of the files within the examples provided, as well as their usages: <br>
+* _measurements.txt_: This _.txt_ file contains the discrete measurement vectors that are fed to the GBEES and MC simulations at the provided epoch. They are of the form 'x y z' with spaces in between float values. Each line represents a new measurement.
+* _size.txt_: This _.txt_ file contains the number of particles that should be initialized by the MC simulation at each discrete measurement update and is equal to the number of active cells in the final distributions of the GBEES simulation, prior to discrete measurement update. This way, the GBEES and MC simulations have equal resolution, thus can be compared for efficiency. 
+* _runtime.txt_: This _.txt_ file stores the information necessary to compare the runtimes and sizes of the GBEES and MC simulations (more on this later). 
+Now that each of the folders and files within the GBEES repositiory has been explained, we'll go into the intracies of each provided example, as they all have slight differences that are implemented. <br>
 
-### Tunable Simulation Constansts
-&ensp; &ensp; - _.T_: total time of the search <br>
-&ensp; &ensp; - _.dt_: time step size of simulation <br>
-&ensp; &ensp; - _N_: size of cartesian grid <br>
-&ensp; &ensp; - _L_x_,_L_y_: length of cartesian grid in $x$-, $y$-direction <br>
+## '/Lorenz3D'
+The 3D Lorenz attractor example provides two different implementations: <br> 
+1. The legacy implementation, stored in the '/Legacy' subfolder, which was the implementation utilized in the GBEES paper by [T. Bewley of 2012](https://www.sciencedirect.com/science/article/pii/S0005109812000908). <br>
+2. The current implementation, stored in the '/Current' subfolder, which includes all the modifications made to improve the efficiency, discussed in the associated AIAA/AAS conference paper. <br>
 
-### Tunable Target Constansts
-&ensp; &ensp; - _.lambda_: same as above <br>
-&ensp; &ensp; - _.stats_flag_: choose which initial PDF to start with <br>
-&ensp; &ensp; &ensp; &ensp; * _stats_flag_$==1$: Gaussian statstics described by parameters above <br>
-&ensp; &ensp; &ensp; &ensp; * else: numerical statistics dependent on _flag_ where the datasets are the same as previously stated <br>
+These two implementations are compared via the '/Timing' folder (more on this later). 
 
-### Tunable Drone/Search vehicle Constansts
-&ensp; &ensp; - _.num_: number of search vehicles <br>
-&ensp; &ensp; - _.ang_speed_: andgular speed of each search vehicle <br>
-&ensp; &ensp; - _.init_theta_: initial starting position of each search vehicle <br>
-&ensp; &ensp; - _.d_: disruptivity of each drone (see paper) <br>
-&ensp; &ensp; - _.orbit_flag_: flag that dictates which orbit path is taken <br>
-&ensp; &ensp; &ensp; &ensp; * _orbit_flag_$==1$: Concentric circles where radius can be varied <br>
-&ensp; &ensp; &ensp; &ensp; * _orbit_flag_$==2$: Cassini ovals with tunable parameters <br>
-&ensp; &ensp; &ensp; &ensp; * _orbit_flag_$==3$: Lemniscates with tunable parameters <br>
-&ensp; &ensp; - _.sigma_: width of field-of-view of observations of search vehicle <br>
+## '/PCR3BP Jupiter-Europa'
+This example takes a set of initial conditions that result in a Lyapunov orbit about the L3 Jupiter-Europa libration point, sourced from the JPL Three-Body Periodic Orbit catalog. We propagate using GBEES for an entire period, corresponding to about 3.5 days, then compare this propagation with a MC simulation. For this example, we assume no epistemic uncertainty, thus the diffusion term is 0, and only advection is considered. 
 
-The simulation generates the initial PDF chosen as well as the orbits of the search vehicles, then demonstrates how the PDF changes as the observations drive the probabilty down and the advection field drives the proabability back to its steady-state. Again, _create_video_ can be used to save the frames in a .MP4 file. 
+## '/PCR3BP Sun-Earth'
+This example takes a set of initial conditions that result in a Lyapunov orbit about the L3 Sun-Earth libration point, sourced from the JPL Three-Body Periodic Orbit catalog. For this simulation, we propagate using GBEES through the close approach, corresponding to about 1.8 days, then compare this propagation with a MC simulation. For this example, we assume epistemic uncertainty, thus including the diffusion term. 
 
-## evasive_search.m
-
-The evasive search code demonstrates how the relaxation advection can be used to demonstrate the rate of change of confidence in observations searching for a stationary target in a ROI. For the evasive target, we assume that the magnitude and direction of the target is impacted by the locations of the search vehicles, and that the target's velocity will point away from the center of the search vehicle. If the search vehicle is closer by, the magnitude of the velocity will be higher, and the random motion will be more sporadic. The evasive velocity is modeled as the negative gradient of a super-Gaussian with $s=0.6$ (so as to avoid increasingly larger velocities if the search vehicle and the target share the same location) and the diffusion is modeled as the superposition of super-Gaussians placed at the locations of the search vehicles. In the background of the total advection field is the relaxation advection, such that there is still a desire to return to the general ROI, though it is scaled so as to not be overbearing. 
-
-### Tunable Target Constansts (not already stated)
-&ensp; &ensp; - _.psi_: skittishness of target (see paper) <br>
-
-
-### Tunable Drone/Search vehicle Constansts (not already stated)
-&ensp; &ensp; &ensp; &ensp; * _orbit_flag_$==4$: Rotating, "herding" Cassini ovals, preferable orbit family for evasive search (see paper) <br>
-&ensp; &ensp; - _.sigma_: width of field-of-view of observations of search vehicle <br>
-&ensp; &ensp; - _.P_: covariance of super-Gaussian used for determining advection and diffusion <br>
-
-The simulation generates the initial PDF chosen as well as the orbits of the search vehicles, then demonstrates how the PDF changes as the observations drive the probabilty down and the advection field drives the proabability around depending on the location of the drones as well as the steady-state. An apparent herding effect is demonstrated when using the "herding" orbit path, as is the goal for evasive target searching. <br> <br>
-
+## '/Timing'
+This folder is dedicated to comparing the results of GBEES and the corresponding MC simulation. To do this, copy and paste the output of _main.cpp_ from both the GBEES and MC simulations and store them in the _runtime.txt_ files. Then, copy these files over to the '/Timing' folder, and save them in the corresponding subfolder (or make your own, for a new simulation). Using the _compare_times.m_ MATLAB file, edit the path of the folder that you would like to compare, as well as the axes units, and then run the program. This will output the efficiency comparison figures from the paper. 
+<br><br>
 For further information about code usage, please contact blhanson@ucsd.edu
 
