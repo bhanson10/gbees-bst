@@ -20,12 +20,12 @@ int main(){
         r++;
     }
     //===================================== Begin User Input ======================================
-    Grid G; G.thresh = 2E-5; G.epoch = {-11.5, -10, 9.5}; G.std = {1, 1, 1}; 
+    Grid G; G.thresh = 2E-5; G.epoch = {measurements[0][0], measurements[0][1], measurements[0][2]}; G.std = {1, 1, 1}; 
     G.del = {0.5,0.5,0.5}; G.xh = {G.del[0]/2, G.del[1]/2, G.del[2]/2}; 
     G.pair = 2; /*1: Cantor, 2: Rosenberg*/ 
     Traj Lor; Lor.sigma = 4; Lor.b = 1; Lor.r = 48; Lor.T = 1; 
     double measure_time = Lor.T; double record_time = measure_time/5; bool RECORD = true; bool MEASURE = true;
-    int output_freq = 100; int del_step = 40;  
+    int output_freq = 2; int del_step = 25;  
     //====================================== End User Input =======================================
     GBEES D;
 

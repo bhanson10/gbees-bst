@@ -70,10 +70,9 @@ for k=0:nm
         
         [D.P, D.j, D.n] = parseGBEES(FILE_PATH);
         sgtitle(['Measurement 1, t=', sprintf('%.*f', 4, t), ' TU'],'Interpreter','Latex','FontSize',16);
-        Plot_PDF(D,const,i,k,t);
+        Plot_PDF(D,const,i,k);
         
         j = 0; 
-        %{
         while(j-t <= TOL) 
             j_str = j/dt; 
             FILE_PATH = DATA_PATH + "/pdf_" + num2str(j_str) + ".txt"; 
@@ -114,20 +113,19 @@ for k=0:nm
 
             j = j + 0.2; 
         end
-        %}
 
         frames(i+1) = getframe(gcf); 
         subplot(1,2,1);
         delete(findobj(gca, 'Type', 'patch'));
-        %delete(findobj(gca, 'Type', 'text'));
+        delete(findobj(gca, 'Type', 'text'));
         subplot(1,2,2);
         delete(findobj(gca, 'Type', 'patch'));
-        %delete(findobj(gca, 'Type', 'text'));
+        delete(findobj(gca, 'Type', 'text'));
         fclose(fileID);
     end
 end
 
-create_video(frames, 'test.mp4');
+%create_video(frames, 'test.mp4');
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %                              FUNCTIONS
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -176,9 +174,10 @@ function initialize_figures()
     zticks([-30 -20 -10 0 10 20 30])
     zticklabels({'-30','-20','-10','0','10', '20', '30'})
     set(gcf, 'Color' , 'white' );
+
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function Plot_PDF(D,const,flag1,flag2, t)        
+function Plot_PDF(D,const,flag1,flag2)        
     max_val = zeros(1,const.d); min_val = zeros(1,const.d);
     for i=1:const.d
         max_val(i) = max(D.j(:,i))+const.dx; min_val(i) = min(D.j(:,i))-const.dx;
@@ -196,27 +195,16 @@ function Plot_PDF(D,const,flag1,flag2, t)
     end
     
     subplot(1,2,1);
-    if(mod(t,0.2)==0)
-        isosurface(X,Y,Z,Pfull,0.005, "HandleVisibility","off");
-        isosurface(X,Y,Z,Pfull,0.0005, "HandleVisibility","off"); 
-        isosurface(X,Y,Z,Pfull,0.00005, "HandleVisibility","off"); alpha(.5);
-    else
-        isosurface(X,Y,Z,Pfull,0.005);
-        isosurface(X,Y,Z,Pfull,0.0005); 
-        isosurface(X,Y,Z,Pfull,0.00005); alpha(.5);
-    end
-
+    isosurface(X,Y,Z,Pfull,0.005, "HandleVisibility","off");
+    isosurface(X,Y,Z,Pfull,0.0005, "HandleVisibility","off"); 
+    isosurface(X,Y,Z,Pfull,0.00005, "HandleVisibility","off"); alpha(.5);
     colormap(cool);
     %set(gcf, 'NumberTitle', 'off', 'Name', 'Exploiting Sparsity'); 
     %set(gcf, 'renderer', 'Painters') 
     drawnow;
     
     subplot(1,2,2);
-    if(mod(t,0.2)==0)
-        isosurface(X,Y,Z,Pfull,0.00005,"HandleVisibility","off"); alpha(.25);
-    else
-        isosurface(X,Y,Z,Pfull,0.00005); alpha(.25);
-    end
+    isosurface(X,Y,Z,Pfull,0.00005,"HandleVisibility","off"); alpha(.25);
     colormap(cool);
     %set(gcf, 'NumberTitle', 'off', 'Name', 'Exploiting Sparsity'); 
     %set(gcf, 'renderer', 'Painters') 

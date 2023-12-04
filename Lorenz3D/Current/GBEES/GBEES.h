@@ -29,21 +29,17 @@ class GBEES{       // GBEES Class
     TreeNode* prune_tree(Grid G, TreeNode* r);
     void mark_cells(Grid G, TreeNode* r);
     TreeNode* delete_cells(Grid G, TreeNode* r);
-    //TreeNode* delete_neighbors(Grid G, TreeNode* r, double& prob_sum);
     void normalize_tree(Grid G, TreeNode* r);
     void get_sum(Grid G, TreeNode* r, double& prob_sum);
     void divide_sum(Grid G, TreeNode* r, double prob_sum);
-    //void normalize_prob(TreeNode* r, double prob_sum);
     void RHS(Grid G, Traj Lor);
     void get_dcu(Grid G, TreeNode* r); 
     void update_ctu(Grid G, TreeNode* r); 
     void update_prob(Grid G, TreeNode* r); 
-    //void get_size(Grid G, TreeNode* r, int& a_count, int& tot_count);
     void max_key(Grid G, TreeNode* r, uint64_t& key); 
     void check_CFL_condition(Grid G, TreeNode* r, double& cfl_min_dt); 
     void Record_Data(std::string file_name, Grid G, TreeNode* r, double t);
     void measurement_update(Measurement m, Grid G, TreeNode* r);
-    //void measurement_update(Measurement m, Grid G, TreeNode* r, double& C);
 };
 /*==============================================================================
 Non-member Function DEFINITIONS
@@ -105,7 +101,7 @@ double MC(double th){
 Member Function DEFINITIONS
 ==============================================================================*/
 void GBEES::Initialize_D(Grid G, Traj Lor){
-    Cell blank_c = {.prob = 0, .v = {0}, .u = {0}, .w = {0}, .ctu = {0}, .dcu = 0, .new_f = -1, .vuw_f = -1, .del_f = -1, .center_f = -1};
+    Cell blank_c = {.prob = 0, .v = {0}, .u = {0}, .w = {0}, .ctu = {0}, .dcu = 0, .new_f = -1, .vuw_f = -1, .del_f = -1};
     TreeNode* dead_node = new TreeNode(-1, blank_c); dead_node->cell.i_nodes = {dead_node, dead_node, dead_node}; dead_node->cell.k_nodes = {dead_node, dead_node, dead_node};
     dead = dead_node; 
 
@@ -120,7 +116,7 @@ void GBEES::Initialize_D(Grid G, Traj Lor){
                     x += pow((current_state[q]*G.del[q]),2)/pow(G.std[q],2); 
                 }
                 
-                Cell c = {.prob = exp(-x/2), .v = {0}, .u = {0}, .w = {0}, .ctu = {0}, .dcu = 0, .state = current_state, .new_f = 0, .vuw_f = 0, .del_f = 0, .center_f = 0};
+                Cell c = {.prob = exp(-x/2), .v = {0}, .u = {0}, .w = {0}, .ctu = {0}, .dcu = 0, .state = current_state, .new_f = 0, .vuw_f = 0, .del_f = 0};
                 TreeNode* new_node = new TreeNode(key, c); P.root = P.insertRecursive(P.root, new_node);
             }
         }
@@ -155,7 +151,7 @@ void GBEES::Initialize_vuw(Grid G, Traj Lor, TreeNode* r){
         for(int q = 0; q < DIM; q++){
             sum += std::abs(r->cell.v[q])/G.del[q];
         }
-        r->cell.cfl_dt = 0.5/sum; 
+        r->cell.cfl_dt = 1/sum; 
     }
 };
 
@@ -167,7 +163,7 @@ void GBEES::Initialize_ik_nodes(Grid G,TreeNode* r){
     Initialize_ik_nodes(G,r->right);
 
     if(r->cell.vuw_f == 0){
-        std::array<int, DIM> l_state = r->cell.state; bool center = 1; 
+        std::array<int, DIM> l_state = r->cell.state; 
         for(int q = 0; q < DIM; q++){
             //Initializing i, k nodes
             std::array<int,DIM> i_state = l_state; i_state[q] = i_state[q]-1; uint64_t i_key = state_conversion(i_state,G);
@@ -175,20 +171,17 @@ void GBEES::Initialize_ik_nodes(Grid G,TreeNode* r){
             TreeNode* i_node = P.recursiveSearch(P.root, i_key); TreeNode* k_node = P.recursiveSearch(P.root, k_key); 
             
             if(i_node == NULL){
-                center = 0; 
                 i_node = dead; r->cell.i_nodes[q] = i_node; 
             }else{
                 r->cell.i_nodes[q] = i_node; i_node->cell.k_nodes[q] = r; 
             }
 
             if(k_node == NULL){
-                center = 0; 
                 k_node = dead; r->cell.k_nodes[q] = k_node; 
             }else{
                 r->cell.k_nodes[q] = k_node; k_node->cell.i_nodes[q] = r; 
             }      
         }
-        r->cell.center_f = center; 
         r->cell.vuw_f = 1; 
     }
 };
@@ -202,6 +195,7 @@ void GBEES::Modify_pointset(Grid G, Traj Lor){
     }
 };
 
+/*
 TreeNode* GBEES::create_neighbors(Grid G, TreeNode* r){
     if (r == NULL){
         return r;
@@ -209,14 +203,118 @@ TreeNode* GBEES::create_neighbors(Grid G, TreeNode* r){
     create_neighbors(G, r->left);
     create_neighbors(G, r->right);
 
-    if ((r->cell.prob >= G.thresh)&&(!r->cell.center_f)){
+    if (r->cell.prob >= G.thresh){
+        std::array<int,DIM> new_state = r->cell.state; uint64_t new_key; TreeNode* new_node; Cell c; 
+        for (int q = 0; q < DIM; q++){
+
+            // Checking Forward Faces
+            if(r->cell.k_nodes[q] == dead){
+                new_state[q] += 1; new_key = state_conversion(new_state,G);
+                c = {.prob = 0, .v = {0}, .u = {0}, .w = {0}, .ctu = {0}, .dcu = 0, .state = new_state, .new_f = 0, .vuw_f = 0, .del_f = 0};
+                new_node = new TreeNode(new_key, c);
+                P.root = P.insertRecursive(P.root, new_node); 
+                // Checking Edges
+                for (int e = 0; e < DIM; e++){
+                    if(e != q){
+                        new_state[e] += 1; new_key = state_conversion(new_state,G);
+                        c = {.prob = 0, .v = {0}, .u = {0}, .w = {0}, .ctu = {0}, .dcu = 0, .state = new_state, .new_f = 0, .vuw_f = 0, .del_f = 0};
+                        new_node = new TreeNode(new_key, c);
+                        P.root = P.insertRecursive(P.root, new_node); 
+
+                        new_state[e] -= 1; new_key = state_conversion(new_state,G);
+                        c = {.prob = 0, .v = {0}, .u = {0}, .w = {0}, .ctu = {0}, .dcu = 0, .state = new_state, .new_f = 0, .vuw_f = 0, .del_f = 0};
+                        new_node = new TreeNode(new_key, c);
+                        P.root = P.insertRecursive(P.root, new_node); 
+                    }
+                }
+            }else{
+                new_state[q] += 1;
+                for (int e = 0; e < DIM; e++){
+                    if(e != q){
+
+                        if(r->cell.k_nodes[q]->cell.k_nodes[e] == dead){
+                            new_state[e] += 1; new_key = state_conversion(new_state,G);
+                            c = {.prob = 0, .v = {0}, .u = {0}, .w = {0}, .ctu = {0}, .dcu = 0, .state = new_state, .new_f = 0, .vuw_f = 0, .del_f = 0};
+                            new_node = new TreeNode(new_key, c);
+                            P.root = P.insertRecursive(P.root, new_node); 
+                        }
+                    
+                        if(r->cell.k_nodes[q]->cell.i_nodes[e] == dead){
+                            new_state[e] -= 1; new_key = state_conversion(new_state,G);
+                            c = {.prob = 0, .v = {0}, .u = {0}, .w = {0}, .ctu = {0}, .dcu = 0, .state = new_state, .new_f = 0, .vuw_f = 0, .del_f = 0};
+                            new_node = new TreeNode(new_key, c);
+                            P.root = P.insertRecursive(P.root, new_node); 
+                        }
+                    }
+                }
+            }
+
+            // Checking Back Faces
+            if(r->cell.i_nodes[q] == dead){
+                new_state[q] -= 1; new_key = state_conversion(new_state,G);
+                c = {.prob = 0, .v = {0}, .u = {0}, .w = {0}, .ctu = {0}, .dcu = 0, .state = new_state, .new_f = 0, .vuw_f = 0, .del_f = 0};
+                new_node = new TreeNode(new_key, c);
+                P.root = P.insertRecursive(P.root, new_node); 
+
+                // Checking Edges
+                for (int e = 0; e < DIM; e++){
+                    if(e != q){
+                        new_state[e] += 1; new_key = state_conversion(new_state,G);
+                        c = {.prob = 0, .v = {0}, .u = {0}, .w = {0}, .ctu = {0}, .dcu = 0, .state = new_state, .new_f = 0, .vuw_f = 0, .del_f = 0};
+                        new_node = new TreeNode(new_key, c);
+                        P.root = P.insertRecursive(P.root, new_node); 
+
+                        new_state[e] -= 1; new_key = state_conversion(new_state,G);
+                        c = {.prob = 0, .v = {0}, .u = {0}, .w = {0}, .ctu = {0}, .dcu = 0, .state = new_state, .new_f = 0, .vuw_f = 0, .del_f = 0};
+                        new_node = new TreeNode(new_key, c);
+                        P.root = P.insertRecursive(P.root, new_node); 
+                    }
+                }
+            }else{
+                new_state[q] -= 1;
+                for (int e = 0; e < DIM; e++){
+                    if(e != q){
+
+                        if(r->cell.k_nodes[q]->cell.k_nodes[e] == dead){
+                            new_state[e] += 1; new_key = state_conversion(new_state,G);
+                            c = {.prob = 0, .v = {0}, .u = {0}, .w = {0}, .ctu = {0}, .dcu = 0, .state = new_state, .new_f = 0, .vuw_f = 0, .del_f = 0};
+                            new_node = new TreeNode(new_key, c);
+                            P.root = P.insertRecursive(P.root, new_node); 
+                        }
+                    
+                        if(r->cell.k_nodes[q]->cell.i_nodes[e] == dead){
+                            new_state[e] -= 1; new_key = state_conversion(new_state,G);
+                            c = {.prob = 0, .v = {0}, .u = {0}, .w = {0}, .ctu = {0}, .dcu = 0, .state = new_state, .new_f = 0, .vuw_f = 0, .del_f = 0};
+                            new_node = new TreeNode(new_key, c);
+                            P.root = P.insertRecursive(P.root, new_node); 
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    return P.root; 
+
+};
+*/
+
+TreeNode* GBEES::create_neighbors(Grid G, TreeNode* r){
+    if (r == NULL){
+        return r;
+    }
+    create_neighbors(G, r->left);
+    create_neighbors(G, r->right);
+
+    //if ((r->cell.prob >= G.thresh)&&(!r->cell.center_f)){
+    if (r->cell.prob >= G.thresh){
         std::array<double,DIM> current_v = r->cell.v; std::array<int,DIM> new_state = r->cell.state; uint64_t new_key; 
         for (int q = 0; q < DIM; q++){
             // Checking Faces
             if(current_v[q] > 0){
                 if(r->cell.k_nodes[q] == dead){
                     new_state[q] += 1; new_key = state_conversion(new_state,G);
-                    Cell c = {.prob = 0, .v = {0}, .u = {0}, .w = {0}, .ctu = {0}, .dcu = 0, .state = new_state, .new_f = 0, .vuw_f = 0, .del_f = 0, .center_f = 0};
+                    Cell c = {.prob = 0, .v = {0}, .u = {0}, .w = {0}, .ctu = {0}, .dcu = 0, .state = new_state, .new_f = 0, .vuw_f = 0, .del_f = 0};
                     TreeNode* new_node = new TreeNode(new_key, c);
                     P.root = P.insertRecursive(P.root, new_node); 
                     // Checking Edges
@@ -224,47 +322,23 @@ TreeNode* GBEES::create_neighbors(Grid G, TreeNode* r){
                         if(e != q){
                             if(current_v[e] > 0){
                                 new_state[e] += 1; new_key = state_conversion(new_state,G);
-                                Cell c = {.prob = 0, .v = {0}, .u = {0}, .w = {0}, .ctu = {0}, .dcu = 0, .state = new_state, .new_f = 0, .vuw_f = 0, .del_f = 0, .center_f = 0};
+                                Cell c = {.prob = 0, .v = {0}, .u = {0}, .w = {0}, .ctu = {0}, .dcu = 0, .state = new_state, .new_f = 0, .vuw_f = 0, .del_f = 0};
                                 TreeNode* new_node = new TreeNode(new_key, c);
                                 P.root = P.insertRecursive(P.root, new_node); 
                             }else if (current_v[e] < 0){
                                 new_state[e] -= 1; new_key = state_conversion(new_state,G);
-                                Cell c = {.prob = 0, .v = {0}, .u = {0}, .w = {0}, .ctu = {0}, .dcu = 0, .state = new_state, .new_f = 0, .vuw_f = 0, .del_f = 0, .center_f = 0};
+                                Cell c = {.prob = 0, .v = {0}, .u = {0}, .w = {0}, .ctu = {0}, .dcu = 0, .state = new_state, .new_f = 0, .vuw_f = 0, .del_f = 0};
                                 TreeNode* new_node = new TreeNode(new_key, c);
                                 P.root = P.insertRecursive(P.root, new_node); 
                             }
                         }
                     }
                 }
-                /*
-                }else{
-                    // Checking Edges
-                    for (int e = 0; e < DIM; e++){
-                        if(e != q){
-                            if(current_v[e] > 0){
-                                if(r->cell.k_nodes[q]->cell.k_nodes[e] == dead){
-                                    new_state[q] += 1; new_state[e] += 1; new_key = state_conversion(new_state,G);
-                                    Cell c = {.prob = 0, .v = {0}, .u = {0}, .w = {0}, .ctu = {0}, .dcu = 0, .state = new_state, .new_f = 0, .vuw_f = 0, .del_f = 0, .center_f = 0};
-                                    TreeNode* new_node = new TreeNode(new_key, c);
-                                    P.root = P.insertRecursive(P.root, new_node); 
-                                }
-                            }else if (current_v[e] < 0){
-                                if(r->cell.k_nodes[q]->cell.i_nodes[e] == dead){
-                                    new_state[q] += 1; new_state[e] -= 1; new_key = state_conversion(new_state,G);
-                                    Cell c = {.prob = 0, .v = {0}, .u = {0}, .w = {0}, .ctu = {0}, .dcu = 0, .state = new_state, .new_f = 0, .vuw_f = 0, .del_f = 0, .center_f = 0};
-                                    TreeNode* new_node = new TreeNode(new_key, c);
-                                    P.root = P.insertRecursive(P.root, new_node); 
-                                }
-                            }
-                        }
-                    }
-                }
-                */
             // Checking Faces
             }else if(current_v[q] < 0){
                 if(r->cell.i_nodes[q] == dead){
                     new_state[q] -= 1; new_key = state_conversion(new_state,G);
-                    Cell c = {.prob = 0, .v = {0}, .u = {0}, .w = {0}, .ctu = {0}, .dcu = 0, .state = new_state, .new_f = 0, .vuw_f = 0, .del_f = 0, .center_f = 0};
+                    Cell c = {.prob = 0, .v = {0}, .u = {0}, .w = {0}, .ctu = {0}, .dcu = 0, .state = new_state, .new_f = 0, .vuw_f = 0, .del_f = 0};
                     TreeNode* new_node = new TreeNode(new_key, c);
                     P.root = P.insertRecursive(P.root, new_node); 
 
@@ -273,42 +347,18 @@ TreeNode* GBEES::create_neighbors(Grid G, TreeNode* r){
                         if(e != q){
                             if(current_v[e] > 0){
                                 new_state[e] += 1; new_key = state_conversion(new_state,G);
-                                Cell c = {.prob = 0, .v = {0}, .u = {0}, .w = {0}, .ctu = {0}, .dcu = 0, .state = new_state, .new_f = 0, .vuw_f = 0, .del_f = 0, .center_f = 0};
+                                Cell c = {.prob = 0, .v = {0}, .u = {0}, .w = {0}, .ctu = {0}, .dcu = 0, .state = new_state, .new_f = 0, .vuw_f = 0, .del_f = 0};
                                 TreeNode* new_node = new TreeNode(new_key, c);
                                 P.root = P.insertRecursive(P.root, new_node); 
                             }else if (current_v[e] < 0){
                                 new_state[e] -= 1; new_key = state_conversion(new_state,G);
-                                Cell c = {.prob = 0, .v = {0}, .u = {0}, .w = {0}, .ctu = {0}, .dcu = 0, .state = new_state, .new_f = 0, .vuw_f = 0, .del_f = 0, .center_f = 0};
+                                Cell c = {.prob = 0, .v = {0}, .u = {0}, .w = {0}, .ctu = {0}, .dcu = 0, .state = new_state, .new_f = 0, .vuw_f = 0, .del_f = 0};
                                 TreeNode* new_node = new TreeNode(new_key, c);
                                 P.root = P.insertRecursive(P.root, new_node); 
                             }
                         }
                     }
                 }
-                /*
-                }else{
-                    // Checking Edges
-                    for (int e = 0; e < DIM; e++){
-                        if(e != q){
-                            if(current_v[e] > 0){
-                                if(r->cell.i_nodes[q]->cell.k_nodes[e] == dead){
-                                    new_state[q] -= 1; new_state[e] += 1; new_key = state_conversion(new_state,G);
-                                    Cell c = {.prob = 0, .v = {0}, .u = {0}, .w = {0}, .ctu = {0}, .dcu = 0, .state = new_state, .new_f = 0, .vuw_f = 0, .del_f = 0, .center_f = 0};
-                                    TreeNode* new_node = new TreeNode(new_key, c);
-                                    P.root = P.insertRecursive(P.root, new_node); 
-                                }
-                            }else if (current_v[e] < 0){
-                                if(r->cell.i_nodes[q]->cell.i_nodes[e] == dead){
-                                    new_state[q] -= 1; new_state[e] -= 1; new_key = state_conversion(new_state,G);
-                                    Cell c = {.prob = 0, .v = {0}, .u = {0}, .w = {0}, .ctu = {0}, .dcu = 0, .state = new_state, .new_f = 0, .vuw_f = 0, .del_f = 0, .center_f = 0};
-                                    TreeNode* new_node = new TreeNode(new_key, c);
-                                    P.root = P.insertRecursive(P.root, new_node); 
-                                }
-                            }
-                        }
-                    }
-                }
-                */
             }
         }
     }
@@ -324,6 +374,75 @@ TreeNode* GBEES::prune_tree(Grid G, TreeNode* r){
     return P.root; 
 };
 
+void GBEES::mark_cells(Grid G, TreeNode* r){
+    if (r==NULL){
+        return;
+    }
+    mark_cells(G, r->left);
+    mark_cells(G, r->right);
+
+    r->cell.vuw_f = 0; bool DELETE = true; 
+    if (r->cell.prob < G.thresh){
+        
+        for(int q = 0; q < DIM; q++){
+            // Looking at Backwards Node
+
+            if(r->cell.i_nodes[q]!=dead){
+                //if (r->cell.i_nodes[q]->cell.prob >= G.thresh){
+                if ((r->cell.i_nodes[q]->cell.v[q]>0)&&(r->cell.i_nodes[q]->cell.prob >= G.thresh)){
+                    DELETE = false; 
+                    break; 
+                }else{
+                    for (int e = 0; e < DIM; e++){
+                        if(e!=q){
+                            if ((r->cell.i_nodes[q]->cell.i_nodes[e]->cell.v[q]>0)&&(r->cell.i_nodes[q]->cell.i_nodes[e]->cell.v[e]>0)&&(r->cell.i_nodes[q]->cell.i_nodes[e]->cell.prob >= G.thresh)){
+                            //if (r->cell.i_nodes[q]->cell.i_nodes[e]->cell.prob >= G.thresh){
+                                DELETE = false; 
+                                break; 
+                            }
+
+                            if ((r->cell.i_nodes[q]->cell.k_nodes[e]->cell.v[q]>0)&&(r->cell.i_nodes[q]->cell.k_nodes[e]->cell.v[e]<0)&&(r->cell.i_nodes[q]->cell.i_nodes[e]->cell.prob >= G.thresh)){
+                            //if (r->cell.i_nodes[q]->cell.k_nodes[e]->cell.prob >= G.thresh){
+                                DELETE = false; 
+                                break; 
+                            }
+                        }
+                    }
+                }
+            }
+            // Looking at Forwards Node
+            if(r->cell.k_nodes[q]!=dead){
+                //if (r->cell.k_nodes[q]->cell.prob >= G.thresh){
+                if ((r->cell.k_nodes[q]->cell.v[q]<0)&&(r->cell.k_nodes[q]->cell.prob >= G.thresh)){
+                    DELETE = false; 
+                    break; 
+                }else{
+                    for (int e = 0; e < DIM; e++){
+                        if(e!=q){
+                            //if (r->cell.k_nodes[q]->cell.i_nodes[e]->cell.prob >= G.thresh){
+                            if ((r->cell.k_nodes[q]->cell.i_nodes[e]->cell.v[q]<0)&&(r->cell.k_nodes[q]->cell.i_nodes[e]->cell.v[e]>0)&&(r->cell.k_nodes[q]->cell.i_nodes[e]->cell.prob >= G.thresh)){
+                                DELETE = false; 
+                                break; 
+                            }
+
+                            //if (r->cell.k_nodes[q]->cell.k_nodes[e]->cell.prob >= G.thresh){
+                            if ((r->cell.k_nodes[q]->cell.k_nodes[e]->cell.v[q]<0)&&(r->cell.k_nodes[q]->cell.k_nodes[e]->cell.v[e]<0)&&(r->cell.k_nodes[q]->cell.k_nodes[e]->cell.prob >= G.thresh)){
+                                DELETE = false; 
+                                break; 
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if(DELETE){
+            r->cell.del_f = 1; 
+        }
+    }
+};
+
+/*
 void GBEES::mark_cells(Grid G, TreeNode* r){
     if (r==NULL){
         return;
@@ -356,6 +475,7 @@ void GBEES::mark_cells(Grid G, TreeNode* r){
         }
     }
 };
+*/
 
 TreeNode* GBEES::delete_cells(Grid G, TreeNode* r){
     if (r==NULL){
@@ -414,20 +534,13 @@ void GBEES::get_dcu(Grid G, TreeNode* r){
     get_dcu(G,r->right);
 
     if(r->key != -1){
-        r->cell.dcu = 0; r->cell.ctu = {0};
+        r->cell.dcu = 0; r->cell.ctu = {0}; std::array <double, DIM> mu = {0, 0, 0};
         for(int q = 0; q < DIM; q++){
             TreeNode* i_node = r->cell.i_nodes[q]; 
             
-            // w/o Diffusion
-            double dcu_p = r->cell.w[q] * r->cell.prob + r->cell.u[q] * r->cell.k_nodes[q]->cell.prob;
-            double dcu_m = i_node->cell.w[q]*i_node->cell.prob + i_node->cell.u[q]*r->cell.prob; 
+            double dcu_p = (r->cell.w[q] * r->cell.prob + r->cell.u[q] * r->cell.k_nodes[q]->cell.prob) - (mu[q])*(r->cell.k_nodes[q]->cell.prob-r->cell.prob)/G.del[q];
+            double dcu_m = (i_node->cell.w[q]*i_node->cell.prob + i_node->cell.u[q]*r->cell.prob)  - (mu[q])*(r->cell.prob-i_node->cell.prob)/G.del[q];
             r->cell.dcu -= (G.dt/G.del[q])*(dcu_p-dcu_m); 
-
-            // w/ Diffusion
-            //double mu = 1; 
-            //double dcu_p = (r->cell.w[q] * r->cell.prob + r->cell.u[q] * r->cell.k_nodes[q]->cell.prob) - (mu)*(r->cell.k_nodes[q]->cell.prob-r->cell.prob)/G.del[q];
-            //double dcu_m = (i_node->cell.w[q]*i_node->cell.prob + i_node->cell.u[q]*r->cell.prob)  - (mu)*(r->cell.prob-i_node->cell.prob)/G.del[q];
-            //r->cell.dcu -= (G.dt/G.del[q])*(dcu_p-dcu_m); 
         }
     }
 };
