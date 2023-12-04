@@ -1,9 +1,15 @@
 clear all; close all; clc; 
 
-DATASET = "./Jupiter-Europa/"; TU = 48562;
+%DATASET = "./Lorenz3D/"; TU = 1;
+%DATASET = "./Jupiter-Europa/"; TU = 48562;
+DATASET = "./Sun-Earth/"; TU = 5022635;
+name1 = 'GBEES';
+name2 = 'MC';
+time_unit = '(s)';
 
 f1 = fopen(DATASET + "runtime1.txt", 'r');
 f2 = fopen(DATASET + "runtime2.txt", 'r');
+
 
 pf = 1; % Choose which speed test to perform, 1 or 2
 
@@ -13,18 +19,18 @@ if(pf==1)
     f1 = figure(1); clf; hold all; f1.Position = [400 250 700 475];
     l = legend; l.Location = "Northwest"; l.FontSize = 14; l.FontName = "Times"; 
     set(gca, 'FontName' , 'Times','FontSize',14);
-    xlabel("Simulation time (s)", 'FontSize', 18, 'FontName', 'Times');
+    xlabel("Simulation time " + time_unit, 'FontSize', 18, 'FontName', 'Times');
     xlim([rt1(1).*TU rt1(end).*TU]);
     %xlim([rt1(1) rt1(end)]);
 
     yyaxis left;
-    plot(rt1.*TU, pt1, 'b-', 'LineWidth', 1, 'DisplayName','GBEES');
-    plot(rt2.*TU, pt2, 'b--', 'LineWidth', 1,'DisplayName','MC');
+    plot(rt1.*TU, pt1, 'b-', 'LineWidth', 1, 'DisplayName',name1);
+    plot(rt2.*TU, pt2, 'b--', 'LineWidth', 1,'DisplayName',name2);
     ylabel("Program time (s)", 'FontSize', 18, 'FontName', 'Times');
     
     yyaxis right;
-    plot(rt1.*TU, s1, 'r-', 'LineWidth', 1, 'DisplayName','GBEES');
-    plot(rt2.*TU, s2, 'r--', 'LineWidth', 1, 'DisplayName','MC');
+    plot(rt1.*TU, s1, 'r-', 'LineWidth', 1, 'DisplayName',name1);
+    plot(rt2.*TU, s2, 'r--', 'LineWidth', 1, 'DisplayName',name2);
     ylabel("Number of cells", 'FontSize', 18, 'FontName', 'Times');
 
 elseif(pf==2)
@@ -33,16 +39,16 @@ elseif(pf==2)
     f1 = figure(1); clf; hold all; f1.Position = [400 250 700 475]; 
     l = legend; l.Location = "Northwest"; l.FontSize = 14; l.FontName = "Times"; 
     set(gca, 'FontName' , 'Times','FontSize',14);
-    xlabel("Simulation time (TU)", 'FontSize', 18, 'FontName', 'Times');
+    xlabel("Simulation time " + time_unit, 'FontSize', 18, 'FontName', 'Times');
     ylabel("Program time (s)", 'FontSize', 18, 'FontName', 'Times');
     xlim([rt1(1) rt1(end)]);
 
     yyaxis left;
-    plot(rt1, pt1, 'b-', 'LineWidth', 1, 'DisplayName','GBEES');
-    plot(rt2, pt2, 'b--', 'LineWidth', 1,'DisplayName','MC');
+    plot(rt1, pt1, 'b-', 'LineWidth', 1, 'DisplayName',name1);
+    plot(rt2, pt2, 'b--', 'LineWidth', 1,'DisplayName',name2);
 
     yyaxis right;
-    plot(rt1, s1, 'r-', 'LineWidth', 1, 'DisplayName','GBEES');
+    plot(rt1, s1, 'r-', 'LineWidth', 1, 'DisplayName',name1);
     ylabel("Number of cells", 'FontSize', 18, 'FontName', 'Times');
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
