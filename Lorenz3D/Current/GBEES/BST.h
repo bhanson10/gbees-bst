@@ -32,7 +32,6 @@ class Cell{  // Cell - data connected to a given cell
         int new_f; 
         int vuw_f; 
         int del_f; 
-        int center_f; 
 };
 
 class Grid{ // Properties of the grid
