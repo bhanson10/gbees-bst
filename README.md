@@ -23,7 +23,24 @@ Here is a breakdown of all of the subrepositories within each of the three examp
 * '/Initial Conditions': This folder in thePCR3BP examples contain _.csv_ files pulled from the JPL Three-Body Periodic Orbit catalog which have the initial conditions of the Lyapunov trajectories. <br>
 
 Here is a breakdown of all of the files within the examples provided, as well as their usages: <br>
-* _measurements.txt_: This _.txt_ file contains the discrete measurement vectors that are fed to the GBEES and MC simulations at the provided epoch, the standard deviation associated with each measurement, the gravitational coefficient of the system, and the period of the orbit (or the time of total propagation). This should be the form of the measurement file: <br>
+* _measurements.txt_: This _.txt_ file contains the discrete measurement vectors that are fed to the GBEES and MC simulations at the provided epoch, the standard deviation associated with each measurement, the gravitational coefficient of the system, and the period of the orbit (or the time of total propagation). This should be the form of the measurement file (for the PCR3BP): <br> <br>
+
+<div align="center">
+  
+| x (LU)      | y (LU)      | vx (LU/TU)  | vy (LU/TU)  | dx (LU)     | dy (LU)     | dvx (LU/TU) | dvy (LU/TU) |
+|    :----:   |    :----:   |    :----:   |    :----:   |    :----:   |    :----:   |    :----:   |    :----:   |
+| x1          | y1          | vx1         | vy1         | dx1         | dy1         | dvx1        | dvy1        |
+| x1          | y1          | vx1         | vy1         | dx2         | dy2         | dvx2        | dvy2        |
+| x1          | y1          | vx1         | vy1         | dx3         | dy3         | dvx3        | dvy3        |
+| ...         | ...         | ...         | ...         | ...         | ...         | ...         | ...         |
+|             |             |             |             |             |             |             |             |
+| mu          |             |             |             |             |             |             |             |
+| mu1         |             |             |             |             |             |             |             |
+| T (TU)      |             |             |             |             |             |             |             |
+| T           |             |             |             |             |             |             |             |
+
+</div>
+
 * _size.txt_: This _.txt_ file contains the number of particles that should be initialized by the MC simulation at each discrete measurement update and is equal to the number of active cells in the final distributions of the GBEES simulation, prior to discrete measurement update. This way, the GBEES and MC simulations have equal resolution, thus can be compared for efficiency. 
 * _runtime.txt_: This _.txt_ file stores the information necessary to compare the runtimes and sizes of the GBEES and MC simulations (more on this later). 
 Now that each of the folders and files within the GBEES repositiory has been explained, we'll go into the intracies of each provided example, as they all have slight differences that are implemented. <br>

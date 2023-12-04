@@ -1,4 +1,4 @@
-x (TU)   y (TU)   vx (TU/LU) vy (TU/LU) dx (TU)     dy (TU)     dvx (TU/LU) dvy (TU/LU)
+x (LU)   y (LU)   vx (LU/TU) vy (LU/TU) dx (LU)     dy (LU)     dvx (LU/TU) dvy (LU/TU)
 -0.01707 0.079844 -3.0173000 -3.7116000 6.684587E-5 6.684587E-5 3.357400E-2 3.357400E-2
 
 mu
