@@ -1,8 +1,8 @@
-/*==============================================================================
+/*==============================================================================================================+
 
 MAIN.CPP
 
-==============================================================================*/
+===============================================================================================================*/
 #include "GBEES.h"
 
 int main(){
@@ -10,22 +10,22 @@ int main(){
     //===================================== Begin User Input ====================================================
     std::cout << "Reading in user inputs..." << std::endl; std::cout << std::endl; 
 
-    const int NM = 1;                                   // Number of measurements 
-    std::string FILE_PATH = "./Data/Sun-Earth";         // Measurement file path
-    std::string FILE_PATH_M = "./Movie Data/Sun-Earth"; // Movie file path
+    const int NM = 1;                                            // Number of measurements 
+    std::string FILE_PATH = "./Data/Jupiter-Europa_LPO";         // Measurement file path
+    std::string FILE_PATH_M = "./Movie Data/Jupiter-Europa_LPO"; // Movie file path
 
     Grid G;                 // Grid object
-    G.thresh = 1.5E-7;        // Probability threshold
+    G.thresh = 1E-7;        // Probability threshold
     G.pair = 2;             // 1: Cantor, 2: Rosenberg
-    G.DIFF_B = true;        // Diffusion inclusion boolean
-    G.diff = {1E-5, 1E-5, 1E-5, 1E-5};  // Diffusion coefficient vector
+    G.diff = {0, 0, 0, 0};  // Diffusion coefficient vector
+    bool OUTPUT = true;     // Print info to terminal
     bool RECORD = true;     // Write PDFs to .txt file
-    bool RECORD_F = false;   // Write frequent PDFs to .txt file (for movie)
+    bool RECORD_F = false;  // Write frequent PDFs to .txt file (for movie)
     bool MEASURE = true;    // Take discrete measurement updates
     int output_freq = 100;  // Number of steps per output to terminal
-    int record_f_freq = 10; // Number of steps per frequent record
+    int record_f_freq = 25; // Number of steps per frequent record (for movie)
     int del_step = 10;      // Number of steps per deletion procedure
-    int num_dist = 6;       // Number of distributions recorded per measurement
+    int num_dist = 4;       // Number of distributions recorded per measurement
     //===========================================================================================================
 
     //===================================== Read in measurement/trajectory info =================================
@@ -52,8 +52,8 @@ int main(){
         r++;
     }
 
-    G.epoch = {means[0][0], means[0][1], means[0][2], means[0][3]}; // Grid initial epoch
-    G.del = {stds[0][0], stds[0][1], stds[0][2], stds[0][3]};       // Grid width
+    G.epoch = {means[0][0], means[0][1], means[0][2], means[0][3]};    // Grid initial epoch
+    G.del = {stds[0][0]/2, stds[0][1]/2, stds[0][2]/2, stds[0][3]/2};  // Grid width
   
     Traj lyap; // Trajectory object
     std::getline(measurement_file, line); // Skip label line
@@ -62,7 +62,7 @@ int main(){
     std::getline(measurement_file, line); lyap.T = std::stod(line);  // Read in T
 
     double measure_time = lyap.T/NM;            // Time between measurements
-    double record_time = measure_time/num_dist; // Time between recording PDF
+    double record_time = measure_time/(num_dist-1); // Time between recording PDF
 
     Measurement m; 
     m.mean = {means[0][0], means[0][1], means[0][2], means[0][3]}; // Measurement mean
@@ -70,35 +70,35 @@ int main(){
 
     measurement_file.close();
     //===========================================================================================================
-    GBEES D;
+
+    //==================================++=== Time-marching n-dimensional PDF ===========++======================
+    GBEES D; D.a_count = 0; D.tot_count = 1; D.cfl_min_dt = 1E10;
 
     std::cout << "Initializing Distribution..." << std::endl; std::cout << std::endl; 
     
     D.Initialize_D(G,lyap, m);     // Create initial GBEES distribtion
     D.normalize_tree(G, D.P.root); // Normalize distribution
-    
+
     std::cout << "Entering time marching..." << std::endl; std::cout << std::endl; 
 
     auto start = std::chrono::high_resolution_clock::now(); // Timing object
     std::chrono::duration<double> elapsed;
 
-    double tt = 0; int nm = 0; int record_count, step_count, record_f_count; double rt, mt; std::ofstream time_file; 
+    double tt = 0; int nm = 0; int record_count, step_count, record_f_count; double rt, mt;
     while(tt < lyap.T){ // Time of uncertainty propagation
 
         auto finish = std::chrono::high_resolution_clock::now(); elapsed = finish - start; uint64_t key = 0; D.max_key(G, D.P.root, key); 
         std::cout << "Timestep: " << nm << "-0, Program time: " << elapsed.count() << " s, Sim. time: " << tt;
         std::cout << " TU, Active/Total Cells: " << D.a_count << "/" << D.tot_count << ", Max key %: " << (key/(pow(2,64)-1))*(100) << '%' << std::endl; 
-        std::string filename = FILE_PATH + "/M" + std::to_string(nm) + "/pdf_0.txt"; D.Record_Data(filename, G, D.P.root, 0); 
-        if(RECORD_F){filename = FILE_PATH_M + "/M" + std::to_string(nm) + "/pdf_0.txt"; D.Record_Data(filename, G, D.P.root, 0);};
-        time_file.open(FILE_PATH + "/Times/time" + std::to_string(nm) + ".txt"); time_file << 0 << std::endl; 
+        if(RECORD){std::string filename = FILE_PATH + "/M" + std::to_string(nm) + "/pdf_0.txt"; D.Record_Data(filename, G, D.P.root, 0);}; 
+        if(RECORD_F){std::string filename = FILE_PATH_M + "/M" + std::to_string(nm) + "/pdf_0.txt"; D.Record_Data(filename, G, D.P.root, 0);};
 
         mt = 0; step_count = 0; record_count = 1; record_f_count = 1; 
         while(mt < measure_time){ // Time between measurements 
             rt = 0; 
 
             while(rt < record_time){ // Time between recording the PDF
-
-                D.Modify_pointset(G,lyap); D.check_CFL_condition(G, D.P.root, D.cfl_min_dt); G.dt = std::min(D.cfl_min_dt, record_time-rt); rt += G.dt;  
+                D.grow_tree(G,lyap); D.check_CFL_condition(G, D.P.root, D.cfl_min_dt); G.dt = std::min(D.cfl_min_dt, record_time-rt); rt += G.dt;  
                 D.RHS(G, lyap); D.update_prob(G, D.P.root); D.normalize_tree(G, D.P.root);  
 
                 if (step_count % del_step == 0){ // Deletion procedure
@@ -106,23 +106,23 @@ int main(){
                 } 
                 
                 step_count+=1; 
-                if (step_count % output_freq == 0){ // Print size to terminal
+                if((OUTPUT)&&(step_count % output_freq == 0)){ // Print info to terminal
                     auto finish = std::chrono::high_resolution_clock::now(); elapsed = finish - start; uint64_t key = 0; D.max_key(G, D.P.root, key); 
-                    std::cout << "Timestep: " << nm << "-" << step_count << ", Program time: " << elapsed.count() << " s, Sim. time: " << tt + mt + rt << " TU, Active/Total Cells: " << D.a_count << "/" << D.tot_count << ", Max key %: " << (key/(pow(2,64)-1))*(100) << '%' << std::endl; 
+                    std::cout << "Timestep: " << nm << "-" << step_count << ", Program time: " << elapsed.count() << " s, Sim. time: " << tt + mt + rt;
+                    std::cout << " TU, Active/Total Cells: " << D.a_count << "/" << D.tot_count << ", Max key %: " << (key/(pow(2,64)-1))*(100) << '%' << std::endl; 
                 }    
 
-                if(RECORD_F){ // Record Movie data
-                    if (step_count % record_f_freq == 0){ 
-                        std::string filename = FILE_PATH_M + "/M" + std::to_string(nm) + "/pdf_" + std::to_string(record_f_count) + ".txt"; D.Record_Data(filename, G, D.P.root, mt + rt);
-                        record_f_count+=1;
-                    }
+                if((RECORD_F)&&(step_count % record_f_freq == 0)){ // Record Movie data
+                    std::string filename = FILE_PATH_M + "/M" + std::to_string(nm) + "/pdf_" + std::to_string(record_f_count) + ".txt"; D.Record_Data(filename, G, D.P.root, mt + rt);
+                    record_f_count+=1;
                 }
 
-                D.cfl_min_dt = 1E10; time_file << std::setprecision(8) << mt + rt << std::endl; 
+                D.cfl_min_dt = 1E10; 
             }
-            if(step_count % output_freq != 0){
+            if((OUTPUT)&&(step_count % output_freq != 0)){
                 finish = std::chrono::high_resolution_clock::now(); elapsed = finish - start; uint64_t key = 0; D.max_key(G, D.P.root, key); 
-                std::cout << "Timestep: " << nm << "-" << step_count << ", Program time: " << elapsed.count() << " s, Sim. time: " << tt + mt + rt << " TU, Active/Total Cells: " << D.a_count << "/" << D.tot_count << ", Max key %: " << (key/(pow(2,64)-1))*(100) << '%' << std::endl; 
+                std::cout << "Timestep: " << nm << "-" << step_count << ", Program time: " << elapsed.count() << " s, Sim. time: " << tt + mt + rt;
+                std::cout << " TU, Active/Total Cells: " << D.a_count << "/" << D.tot_count << ", Max key %: " << (key/(pow(2,64)-1))*(100) << '%' << std::endl; 
             }
  
             if(RECORD){ // Record PDF 
@@ -130,7 +130,11 @@ int main(){
                 std::cout << "RECORDING PDF AT: " << tt + mt + rt << " TU..." << std::endl;
                 std::cout << std::endl; 
                 std::string filename = FILE_PATH + "/M" + std::to_string(nm) + "/pdf_" + std::to_string(record_count) + ".txt"; D.Record_Data(filename, G, D.P.root, mt + rt);
-                record_count+=1;
+                record_count+=1; 
+            }
+            if(RECORD_F){ // Record PDF 
+                std::string filename = FILE_PATH_M + "/M" + std::to_string(nm) + "/pdf_" + std::to_string(record_f_count) + ".txt"; D.Record_Data(filename, G, D.P.root, mt + rt);
+                record_f_count+=1; 
             }
 
             mt += rt; 
@@ -151,7 +155,7 @@ int main(){
             D.P.root = D.prune_tree(G, lyap, D.P.root); // Deletion procedure
         }
         
-        time_file.close(); 
     }
     return 0;
+    //===========================================================================================================
 }

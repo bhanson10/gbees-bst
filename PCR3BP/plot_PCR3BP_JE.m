@@ -2,17 +2,16 @@ close all; clc; clear all;
 %%%%%%%%%%%%%%%%% begin user input %%%%%%%%%%%%%%%% 
 po = readmatrix('./Initial Conditions/periodic_orbits_JE.csv'); const.d = 4; 
 const.LU = 668519; const.TU = 48562; const.mu = po(12);
-rv.start=[po(2); po(3); po(5); po(6)]; 
+rv.start=[po(2); po(3); po(5); po(6)]; n 
 const.J = po(8); const.SI = po(11); 
-const.T = po(9); nm = 0; size = 500;
+const.T = po(9); nm = 2; size = 500;
 %%%%%%%%%%%%%%%% end of user input %%%%%%%%%%%%%%%
 norm = 0; % 0: plot is in real units, 1: plot is normalized
 initialize_figures(rv,const,norm); 
 
-%{
 % Plotting MC trajectories
 for k=0:nm
-    DATA_PATH = append("./MC/MC Freq Data/Jupiter-Europa/M", num2str(k));
+    DATA_PATH = append("./MC/Trajectories/Jupiter-Europa/M", num2str(k));
     fileList = dir(fullfile(DATA_PATH, '*.txt'));  % List only .txt files
     numFiles = numel(fileList); 
     
@@ -57,7 +56,6 @@ for k=0:nm
         end
     end
 end
-%}
 
 % Plotting nominal trajectories
 Y0 = rv.start; tspan = [0 const.T]; 
@@ -111,9 +109,8 @@ for k=0:nm
         fclose(fileID);
     end
     
-    %{
-    % Plotting MC dots
-    DATA_PATH = append("./MC/MC Data/Jupiter-Europa/M", num2str(k));
+    % Plotting MC scatters
+    DATA_PATH = append("./MC/Epochs/Jupiter-Europa/M", num2str(k));
     fileList = dir(fullfile(DATA_PATH, '*.txt'));  % List only .txt files
     numFiles = numel(fileList);
     
@@ -161,7 +158,6 @@ for k=0:nm
         % Close the file
         fclose(fileID);
     end
-    %}
 end
 
 %Adding Annotations

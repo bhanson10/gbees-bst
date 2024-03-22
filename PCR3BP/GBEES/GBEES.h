@@ -9,19 +9,17 @@ class GBEES{       // GBEES Class
   public:
     BST P;
     TreeNode* dead; 
-    int a_count = 0; 
-    int tot_count = 1; 
-    double cfl_min_dt = 1E10;
+    int a_count; 
+    int tot_count; 
+    double cfl_min_dt;
 
-    void Initialize_D(Grid G, Traj lyap, Measurement m);
+    void Initialize_D(Grid G, Traj& lyap, Measurement m);
     void Initialize_vuw(Grid G, Traj lyap, TreeNode* r);
     void Initialize_ik_nodes(Grid G, TreeNode* r); 
-    void Modify_pointset(Grid G, Traj lyap);
-    TreeNode* create_neighbors(Grid G, Traj lyap, TreeNode* r);
-    TreeNode* create_neighbors_d(Grid G, Traj lyap, TreeNode* r);
+    void grow_tree(Grid G, Traj lyap);
+    TreeNode* create_neighbors(Grid G, TreeNode* r, Traj lyap);
     TreeNode* prune_tree(Grid G, Traj lyap, TreeNode* r);
     void mark_cells(Grid G, TreeNode* r);
-    void mark_cells_d(Grid G, TreeNode* r);
     TreeNode* delete_cells(Grid G, TreeNode* r);
     void normalize_tree(Grid G, TreeNode* r);
     void get_sum(Grid G, TreeNode* r, double& prob_sum);
@@ -100,25 +98,31 @@ double MC(double th){
 /*==============================================================================
 Member Function DEFINITIONS
 ==============================================================================*/
-void GBEES::Initialize_D(Grid G, Traj lyap, Measurement m){
-    Cell blank_c = {.prob = 0, .v = {0}, .u = {0}, .w = {0}, .ctu = {0}, .dcu = 0, .new_f = -1, .vuw_f = -1, .del_f = -1};
+void GBEES::Initialize_D(Grid G, Traj& lyap, Measurement m){
+    Cell blank_c = {.prob = 0, .v = {0}, .u = {0}, .w = {0}, .ctu = {0}, .dcu = 0, .new_f = -1, .ik_f = -1, .del_f = -1};
     TreeNode* dead_node = new TreeNode(-1, blank_c); dead_node->cell.i_nodes = {dead_node, dead_node, dead_node, dead_node}; dead_node->cell.k_nodes = {dead_node, dead_node, dead_node, dead_node};
     dead = dead_node; 
 
     std::array<int,DIM> current_state; uint64_t key; 
 
+    lyap.jacobi_bounds[0] = __DBL_MAX__; lyap.jacobi_bounds[1] = -__DBL_MAX__; 
+
+    double J; 
     for (int i = round((-3*m.std[0])/G.del[0]); i <= round((3*m.std[0])/G.del[0]); i++){
         for (int j = round((-3*m.std[1])/G.del[1]); j <= round((3*m.std[1])/G.del[1]); j++){
             for (int k = round((-3*m.std[2])/G.del[2]); k <= round((3*m.std[2])/G.del[2]); k++){
                 for (int l = round((-3*m.std[3])/G.del[3]); l <= round((3*m.std[3])/G.del[3]); l++){
                     current_state = {i,j,k,l}; key = state_conversion(current_state, G);
+                    J = (0.5)*(pow(k*G.del[2]+G.epoch[2],2)+pow(l*G.del[3]+G.epoch[3],2))-(0.5)*(pow(i*G.del[0]+G.epoch[0],2)+pow(j*G.del[1]+G.epoch[1],2))-((1-lyap.mu)/pow(pow(i*G.del[0]+G.epoch[0]+lyap.mu,2)+pow(j*G.del[1]+G.epoch[1],2),0.5))-((lyap.mu)/pow(pow(i*G.del[0]+G.epoch[0]-1+lyap.mu,2)+pow(j*G.del[1]+G.epoch[1],2),0.5));
+                    lyap.jacobi_bounds[0] = std::min(lyap.jacobi_bounds[0],J);
+                    lyap.jacobi_bounds[1] = std::max(lyap.jacobi_bounds[1],J);
 
                     double x = 0; 
                     for(int q = 0; q < DIM; q++){
                         x += pow((current_state[q]*G.del[q]),2)/pow(m.std[q],2); 
                     }
                     
-                    Cell c = {.prob = exp(-x/2), .v = {0}, .u = {0}, .w = {0}, .ctu = {0}, .dcu = 0, .state = current_state, .new_f = 0, .vuw_f = 0, .del_f = 0};
+                    Cell c = {.prob = exp(-x/2), .v = {0}, .u = {0}, .w = {0}, .ctu = {0}, .dcu = 0, .state = current_state, .new_f = 0, .ik_f = 0, .del_f = 0};
 
                     if(c.prob >= G.thresh){
                         a_count++; 
@@ -161,15 +165,11 @@ void GBEES::Initialize_vuw(Grid G, Traj lyap, TreeNode* r){
 
         double sum = 0; 
         for(int q = 0; q < DIM; q++){
-            sum += std::abs(r->cell.v[q])/G.del[q];
+            // sum += std::abs(r->cell.v[q])/G.del[q];
+            sum = std::max(sum,std::abs(r->cell.v[q])/G.del[q]);
         }
         
-        double C_max; 
-        if(G.DIFF_B){
-            C_max = 1; 
-        }else{
-            C_max = 0.5; 
-        }
+        double C_max = 1; 
             
         r->cell.cfl_dt = C_max/sum;
     }
@@ -182,7 +182,7 @@ void GBEES::Initialize_ik_nodes(Grid G,TreeNode* r){
     Initialize_ik_nodes(G,r->left);
     Initialize_ik_nodes(G,r->right);
 
-    if(r->cell.vuw_f == 0){
+    if(r->cell.ik_f == 0){
         std::array<int, DIM> l_state = r->cell.state; 
         for(int q = 0; q < DIM; q++){
             //Initializing i, k nodes
@@ -202,19 +202,12 @@ void GBEES::Initialize_ik_nodes(Grid G,TreeNode* r){
                 r->cell.k_nodes[q] = k_node; k_node->cell.i_nodes[q] = r; 
             }      
         }
-        r->cell.vuw_f = 1; 
+        r->cell.ik_f = 1; 
     }
 };
 
-void GBEES::Modify_pointset(Grid G, Traj lyap){
-    /*
-    if(G.DIFF_B){
-        P.root = create_neighbors_d(G, lyap, P.root); 
-    }else{
-        P.root = create_neighbors(G, lyap, P.root); 
-    }
-    */
-    P.root = create_neighbors(G, lyap, P.root); 
+void GBEES::grow_tree(Grid G, Traj lyap){
+    P.root = create_neighbors(G, P.root, lyap); 
     Initialize_ik_nodes(G,P.root); 
     Initialize_vuw(G, lyap, P.root); 
     if(!P.isBalanced(P.root)){
@@ -222,124 +215,193 @@ void GBEES::Modify_pointset(Grid G, Traj lyap){
     }
 };
 
-TreeNode* GBEES::create_neighbors(Grid G, Traj lyap, TreeNode* r){
+TreeNode* GBEES::create_neighbors(Grid G, TreeNode* r, Traj lyap){
     if (r == NULL){
         return r;
     }
-    create_neighbors(G, lyap, r->left);
-    create_neighbors(G, lyap, r->right);
+    create_neighbors(G, r->left, lyap);
+    create_neighbors(G, r->right, lyap);
 
+    double J; 
     if (r->cell.prob >= G.thresh){
-        std::array<double,DIM> current_v = r->cell.v; std::array<int,DIM> new_state = r->cell.state; uint64_t new_key; 
+        std::array<double,DIM> current_v = r->cell.v; 
+        std::array<int,DIM> current_state = r->cell.state; std::array<int,DIM> new_state; uint64_t new_key;
         for (int q = 0; q < DIM; q++){
-            // Checking Faces
+            new_state = current_state; 
+            // Checking Forward Faces
             if(current_v[q] > 0){
                 if(r->cell.k_nodes[q] == dead){
-                    new_state[q] += 1; new_key = state_conversion(new_state,G);
-                    Cell c = {.prob = 0, .v = {0}, .u = {0}, .w = {0}, .ctu = {0}, .dcu = 0, .state = new_state, .new_f = 0, .vuw_f = 0, .del_f = 0};
-                    TreeNode* new_node = new TreeNode(new_key, c);
+                    new_state[q] += 1; 
+                    new_key = state_conversion(new_state,G);
+                    Cell c = {.prob = 0, .v = {0}, .u = {0}, .w = {0}, .ctu = {0}, .dcu = 0, .state = new_state, .new_f = 0, .ik_f = 0, .del_f = 0};
+                    TreeNode* new_node = new TreeNode(new_key, c); 
                     P.root = P.insertRecursive(P.root, new_node); 
+                    // J = (0.5)*(pow(new_state[2]*G.del[2]+G.epoch[2],2)+pow(new_state[3]*G.del[3]+G.epoch[3],2))-(0.5)*(pow(new_state[0]*G.del[0]+G.epoch[0],2)+pow(new_state[1]*G.del[1]+G.epoch[1],2))-((1-lyap.mu)/pow(pow(new_state[0]*G.del[0]+G.epoch[0]+lyap.mu,2)+pow(new_state[1]*G.del[1]+G.epoch[1],2),0.5))-((lyap.mu)/pow(pow(new_state[0]*G.del[0]+G.epoch[0]-1+lyap.mu,2)+pow(new_state[1]*G.del[1]+G.epoch[1],2),0.5));
+                    // if((J >= lyap.jacobi_bounds[0])&&(J <= lyap.jacobi_bounds[1])){
+                    //     new_key = state_conversion(new_state,G);
+                    //     Cell c = {.prob = 0, .v = {0}, .u = {0}, .w = {0}, .ctu = {0}, .dcu = 0, .state = new_state, .new_f = 0, .ik_f = 0, .del_f = 0};
+                    //     TreeNode* new_node = new TreeNode(new_key, c); 
+                    //     P.root = P.insertRecursive(P.root, new_node); 
+                    // }
                     // Checking Edges
                     for (int e = 0; e < DIM; e++){
+                        new_state = current_state; new_state[q] += 1; 
                         if(e != q){
                             if(current_v[e] > 0){
-                                new_state[e] += 1; new_key = state_conversion(new_state,G);
-                                Cell c = {.prob = 0, .v = {0}, .u = {0}, .w = {0}, .ctu = {0}, .dcu = 0, .state = new_state, .new_f = 0, .vuw_f = 0, .del_f = 0};
+                                new_state[e] += 1; 
+                                new_key = state_conversion(new_state,G);
+                                Cell c = {.prob = 0, .v = {0}, .u = {0}, .w = {0}, .ctu = {0}, .dcu = 0, .state = new_state, .new_f = 0, .ik_f = 0, .del_f = 0};
                                 TreeNode* new_node = new TreeNode(new_key, c);
                                 P.root = P.insertRecursive(P.root, new_node); 
+                                // J = (0.5)*(pow(new_state[2]*G.del[2]+G.epoch[2],2)+pow(new_state[3]*G.del[3]+G.epoch[3],2))-(0.5)*(pow(new_state[0]*G.del[0]+G.epoch[0],2)+pow(new_state[1]*G.del[1]+G.epoch[1],2))-((1-lyap.mu)/pow(pow(new_state[0]*G.del[0]+G.epoch[0]+lyap.mu,2)+pow(new_state[1]*G.del[1]+G.epoch[1],2),0.5))-((lyap.mu)/pow(pow(new_state[0]*G.del[0]+G.epoch[0]-1+lyap.mu,2)+pow(new_state[1]*G.del[1]+G.epoch[1],2),0.5));
+                                // if((J >= lyap.jacobi_bounds[0])&&(J <= lyap.jacobi_bounds[1])){
+                                //     new_key = state_conversion(new_state,G);
+                                //     Cell c = {.prob = 0, .v = {0}, .u = {0}, .w = {0}, .ctu = {0}, .dcu = 0, .state = new_state, .new_f = 0, .ik_f = 0, .del_f = 0};
+                                //     TreeNode* new_node = new TreeNode(new_key, c);
+                                //     P.root = P.insertRecursive(P.root, new_node); 
+                                // }
                             }else if (current_v[e] < 0){
-                                new_state[e] -= 1; new_key = state_conversion(new_state,G);
-                                Cell c = {.prob = 0, .v = {0}, .u = {0}, .w = {0}, .ctu = {0}, .dcu = 0, .state = new_state, .new_f = 0, .vuw_f = 0, .del_f = 0};
-                                TreeNode* new_node = new TreeNode(new_key, c);
+                                new_state[e] -= 1; 
+                                new_key = state_conversion(new_state,G);
+                                Cell c = {.prob = 0, .v = {0}, .u = {0}, .w = {0}, .ctu = {0}, .dcu = 0, .state = new_state, .new_f = 0, .ik_f = 0, .del_f = 0};
+                                TreeNode* new_node = new TreeNode(new_key, c); 
+                                std::array<int, DIM> l_state = new_node->cell.state; 
                                 P.root = P.insertRecursive(P.root, new_node); 
+                                // J = (0.5)*(pow(new_state[2]*G.del[2]+G.epoch[2],2)+pow(new_state[3]*G.del[3]+G.epoch[3],2))-(0.5)*(pow(new_state[0]*G.del[0]+G.epoch[0],2)+pow(new_state[1]*G.del[1]+G.epoch[1],2))-((1-lyap.mu)/pow(pow(new_state[0]*G.del[0]+G.epoch[0]+lyap.mu,2)+pow(new_state[1]*G.del[1]+G.epoch[1],2),0.5))-((lyap.mu)/pow(pow(new_state[0]*G.del[0]+G.epoch[0]-1+lyap.mu,2)+pow(new_state[1]*G.del[1]+G.epoch[1],2),0.5));
+                                // if((J >= lyap.jacobi_bounds[0])&&(J <= lyap.jacobi_bounds[1])){
+                                //     new_key = state_conversion(new_state,G);
+                                //     Cell c = {.prob = 0, .v = {0}, .u = {0}, .w = {0}, .ctu = {0}, .dcu = 0, .state = new_state, .new_f = 0, .ik_f = 0, .del_f = 0};
+                                //     TreeNode* new_node = new TreeNode(new_key, c); 
+                                //     std::array<int, DIM> l_state = new_node->cell.state; 
+                                //     P.root = P.insertRecursive(P.root, new_node); 
+                                // }
+                            }
+                        }
+                    }
+                }else{
+                    // Checking Edges
+                    for (int e = 0; e < DIM; e++){
+                        new_state = current_state; new_state[q] += 1; 
+                        if(e != q){
+                            if(current_v[e] > 0){
+                                if(r->cell.k_nodes[q]->cell.k_nodes[e] == dead){
+                                    new_state[e] += 1; 
+                                    new_key = state_conversion(new_state,G);
+                                    Cell c = {.prob = 0, .v = {0}, .u = {0}, .w = {0}, .ctu = {0}, .dcu = 0, .state = new_state, .new_f = 0, .ik_f = 0, .del_f = 0};
+                                    TreeNode* new_node = new TreeNode(new_key, c); 
+                                    P.root = P.insertRecursive(P.root, new_node);
+                                    // J = (0.5)*(pow(new_state[2]*G.del[2]+G.epoch[2],2)+pow(new_state[3]*G.del[3]+G.epoch[3],2))-(0.5)*(pow(new_state[0]*G.del[0]+G.epoch[0],2)+pow(new_state[1]*G.del[1]+G.epoch[1],2))-((1-lyap.mu)/pow(pow(new_state[0]*G.del[0]+G.epoch[0]+lyap.mu,2)+pow(new_state[1]*G.del[1]+G.epoch[1],2),0.5))-((lyap.mu)/pow(pow(new_state[0]*G.del[0]+G.epoch[0]-1+lyap.mu,2)+pow(new_state[1]*G.del[1]+G.epoch[1],2),0.5));
+                                    // if((J >= lyap.jacobi_bounds[0])&&(J <= lyap.jacobi_bounds[1])){
+                                    //     new_key = state_conversion(new_state,G);
+                                    //     Cell c = {.prob = 0, .v = {0}, .u = {0}, .w = {0}, .ctu = {0}, .dcu = 0, .state = new_state, .new_f = 0, .ik_f = 0, .del_f = 0};
+                                    //     TreeNode* new_node = new TreeNode(new_key, c); 
+                                    //     P.root = P.insertRecursive(P.root, new_node);
+                                    // }
+                                }
+                            }else if (current_v[e] < 0){
+                                if(r->cell.k_nodes[q]->cell.i_nodes[e] == dead){
+                                    new_state[e] -= 1; 
+                                    new_key = state_conversion(new_state,G);
+                                    Cell c = {.prob = 0, .v = {0}, .u = {0}, .w = {0}, .ctu = {0}, .dcu = 0, .state = new_state, .new_f = 0, .ik_f = 0, .del_f = 0};
+                                    TreeNode* new_node = new TreeNode(new_key, c);
+                                    P.root = P.insertRecursive(P.root, new_node);
+                                    // J = (0.5)*(pow(new_state[2]*G.del[2]+G.epoch[2],2)+pow(new_state[3]*G.del[3]+G.epoch[3],2))-(0.5)*(pow(new_state[0]*G.del[0]+G.epoch[0],2)+pow(new_state[1]*G.del[1]+G.epoch[1],2))-((1-lyap.mu)/pow(pow(new_state[0]*G.del[0]+G.epoch[0]+lyap.mu,2)+pow(new_state[1]*G.del[1]+G.epoch[1],2),0.5))-((lyap.mu)/pow(pow(new_state[0]*G.del[0]+G.epoch[0]-1+lyap.mu,2)+pow(new_state[1]*G.del[1]+G.epoch[1],2),0.5));
+                                    // if((J >= lyap.jacobi_bounds[0])&&(J <= lyap.jacobi_bounds[1])){
+                                    //     new_key = state_conversion(new_state,G);
+                                    //     Cell c = {.prob = 0, .v = {0}, .u = {0}, .w = {0}, .ctu = {0}, .dcu = 0, .state = new_state, .new_f = 0, .ik_f = 0, .del_f = 0};
+                                    //     TreeNode* new_node = new TreeNode(new_key, c);
+                                    //     P.root = P.insertRecursive(P.root, new_node);
+                                    // }
+                                }
                             }
                         }
                     }
                 }
-            // Checking Faces
+            // Checking Backward Faces
             }else if(current_v[q] < 0){
                 if(r->cell.i_nodes[q] == dead){
-                    new_state[q] -= 1; new_key = state_conversion(new_state,G);
-                    Cell c = {.prob = 0, .v = {0}, .u = {0}, .w = {0}, .ctu = {0}, .dcu = 0, .state = new_state, .new_f = 0, .vuw_f = 0, .del_f = 0};
+                    new_state[q] -= 1;
+                    new_key = state_conversion(new_state,G);
+                    Cell c = {.prob = 0, .v = {0}, .u = {0}, .w = {0}, .ctu = {0}, .dcu = 0, .state = new_state, .new_f = 0, .ik_f = 0, .del_f = 0};
                     TreeNode* new_node = new TreeNode(new_key, c);
-                    P.root = P.insertRecursive(P.root, new_node); 
-
+                    P.root = P.insertRecursive(P.root, new_node);
+                    // J = (0.5)*(pow(new_state[2]*G.del[2]+G.epoch[2],2)+pow(new_state[3]*G.del[3]+G.epoch[3],2))-(0.5)*(pow(new_state[0]*G.del[0]+G.epoch[0],2)+pow(new_state[1]*G.del[1]+G.epoch[1],2))-((1-lyap.mu)/pow(pow(new_state[0]*G.del[0]+G.epoch[0]+lyap.mu,2)+pow(new_state[1]*G.del[1]+G.epoch[1],2),0.5))-((lyap.mu)/pow(pow(new_state[0]*G.del[0]+G.epoch[0]-1+lyap.mu,2)+pow(new_state[1]*G.del[1]+G.epoch[1],2),0.5));
+                    // if((J >= lyap.jacobi_bounds[0])&&(J <= lyap.jacobi_bounds[1])){
+                    //     new_key = state_conversion(new_state,G);
+                    //     Cell c = {.prob = 0, .v = {0}, .u = {0}, .w = {0}, .ctu = {0}, .dcu = 0, .state = new_state, .new_f = 0, .ik_f = 0, .del_f = 0};
+                    //     TreeNode* new_node = new TreeNode(new_key, c);
+                    //     P.root = P.insertRecursive(P.root, new_node);
+                    // }
                     // Checking Edges
                     for (int e = 0; e < DIM; e++){
+                        new_state = current_state; new_state[q] -= 1; 
                         if(e != q){
                             if(current_v[e] > 0){
-                                new_state[e] += 1; new_key = state_conversion(new_state,G);
-                                Cell c = {.prob = 0, .v = {0}, .u = {0}, .w = {0}, .ctu = {0}, .dcu = 0, .state = new_state, .new_f = 0, .vuw_f = 0, .del_f = 0};
+                                new_state[e] += 1; 
+                                new_key = state_conversion(new_state,G);
+                                Cell c = {.prob = 0, .v = {0}, .u = {0}, .w = {0}, .ctu = {0}, .dcu = 0, .state = new_state, .new_f = 0, .ik_f = 0, .del_f = 0};
                                 TreeNode* new_node = new TreeNode(new_key, c);
-                                P.root = P.insertRecursive(P.root, new_node); 
+                                P.root = P.insertRecursive(P.root, new_node);
+                                // J = (0.5)*(pow(new_state[2]*G.del[2]+G.epoch[2],2)+pow(new_state[3]*G.del[3]+G.epoch[3],2))-(0.5)*(pow(new_state[0]*G.del[0]+G.epoch[0],2)+pow(new_state[1]*G.del[1]+G.epoch[1],2))-((1-lyap.mu)/pow(pow(new_state[0]*G.del[0]+G.epoch[0]+lyap.mu,2)+pow(new_state[1]*G.del[1]+G.epoch[1],2),0.5))-((lyap.mu)/pow(pow(new_state[0]*G.del[0]+G.epoch[0]-1+lyap.mu,2)+pow(new_state[1]*G.del[1]+G.epoch[1],2),0.5));
+                                // if((J >= lyap.jacobi_bounds[0])&&(J <= lyap.jacobi_bounds[1])){
+                                //     new_key = state_conversion(new_state,G);
+                                //     Cell c = {.prob = 0, .v = {0}, .u = {0}, .w = {0}, .ctu = {0}, .dcu = 0, .state = new_state, .new_f = 0, .ik_f = 0, .del_f = 0};
+                                //     TreeNode* new_node = new TreeNode(new_key, c);
+                                //     P.root = P.insertRecursive(P.root, new_node);
+                                // }
                             }else if (current_v[e] < 0){
-                                new_state[e] -= 1; new_key = state_conversion(new_state,G);
-                                Cell c = {.prob = 0, .v = {0}, .u = {0}, .w = {0}, .ctu = {0}, .dcu = 0, .state = new_state, .new_f = 0, .vuw_f = 0, .del_f = 0};
-                                TreeNode* new_node = new TreeNode(new_key, c);
-                                P.root = P.insertRecursive(P.root, new_node); 
+                                new_state[e] -= 1; 
+                                new_key = state_conversion(new_state,G);
+                                Cell c = {.prob = 0, .v = {0}, .u = {0}, .w = {0}, .ctu = {0}, .dcu = 0, .state = new_state, .new_f = 0, .ik_f = 0, .del_f = 0};
+                                TreeNode* new_node = new TreeNode(new_key, c); 
+                                P.root = P.insertRecursive(P.root, new_node);
+                                // J = (0.5)*(pow(new_state[2]*G.del[2]+G.epoch[2],2)+pow(new_state[3]*G.del[3]+G.epoch[3],2))-(0.5)*(pow(new_state[0]*G.del[0]+G.epoch[0],2)+pow(new_state[1]*G.del[1]+G.epoch[1],2))-((1-lyap.mu)/pow(pow(new_state[0]*G.del[0]+G.epoch[0]+lyap.mu,2)+pow(new_state[1]*G.del[1]+G.epoch[1],2),0.5))-((lyap.mu)/pow(pow(new_state[0]*G.del[0]+G.epoch[0]-1+lyap.mu,2)+pow(new_state[1]*G.del[1]+G.epoch[1],2),0.5));
+                                // if((J >= lyap.jacobi_bounds[0])&&(J <= lyap.jacobi_bounds[1])){
+                                //     new_key = state_conversion(new_state,G);
+                                //     Cell c = {.prob = 0, .v = {0}, .u = {0}, .w = {0}, .ctu = {0}, .dcu = 0, .state = new_state, .new_f = 0, .ik_f = 0, .del_f = 0};
+                                //     TreeNode* new_node = new TreeNode(new_key, c); 
+                                //     P.root = P.insertRecursive(P.root, new_node);
+                                // }
                             }
                         }
                     }
-                }
-            }
-        }
-    }
-
-    return P.root; 
-
-};
-
-TreeNode* GBEES::create_neighbors_d(Grid G, Traj lyap, TreeNode* r){
-    if (r == NULL){
-        return r;
-    }
-    create_neighbors_d(G, lyap, r->left);
-    create_neighbors_d(G, lyap, r->right);
-
-    if (r->cell.prob >= G.thresh){
-        std::array<double,DIM> current_v = r->cell.v; std::array<int,DIM> new_state; uint64_t new_key; Cell c; TreeNode* new_node; 
-        for (int q = 0; q < DIM; q++){
-            // Checking Forward Faces
-            if(r->cell.k_nodes[q] == dead){
-                new_state = r->cell.state; new_state[q] += 1; new_key = state_conversion(new_state,G);
-                c = {.prob = 0, .v = {0}, .u = {0}, .w = {0}, .ctu = {0}, .dcu = 0, .state = new_state, .new_f = 0, .vuw_f = 0, .del_f = 0};
-                new_node = new TreeNode(new_key, c);
-                P.root = P.insertRecursive(P.root, new_node); 
-                
-                // Checking Edges
-                for (int e = 0; e < DIM; e++){
-                    if(e != q){
-                        new_state[e] += 1; new_key = state_conversion(new_state,G);
-                        c = {.prob = 0, .v = {0}, .u = {0}, .w = {0}, .ctu = {0}, .dcu = 0, .state = new_state, .new_f = 0, .vuw_f = 0, .del_f = 0};
-                        new_node = new TreeNode(new_key, c);
-                        P.root = P.insertRecursive(P.root, new_node); 
-
-                        new_state[e] -= 2; new_key = state_conversion(new_state,G);
-                        c = {.prob = 0, .v = {0}, .u = {0}, .w = {0}, .ctu = {0}, .dcu = 0, .state = new_state, .new_f = 0, .vuw_f = 0, .del_f = 0};
-                        new_node = new TreeNode(new_key, c);
-                        P.root = P.insertRecursive(P.root, new_node); 
-                    }
-                }
-            }
-            // Checking Backward Faces
-            if(r->cell.i_nodes[q] == dead){
-                new_state = r->cell.state; new_state[q] -= 1; new_key = state_conversion(new_state,G);
-                c = {.prob = 0, .v = {0}, .u = {0}, .w = {0}, .ctu = {0}, .dcu = 0, .state = new_state, .new_f = 0, .vuw_f = 0, .del_f = 0};
-                new_node = new TreeNode(new_key, c);
-                P.root = P.insertRecursive(P.root, new_node); 
-
-                // Checking Edges
-                for (int e = 0; e < DIM; e++){
-                    if(e != q){
-                        new_state[e] += 1; new_key = state_conversion(new_state,G);
-                        c = {.prob = 0, .v = {0}, .u = {0}, .w = {0}, .ctu = {0}, .dcu = 0, .state = new_state, .new_f = 0, .vuw_f = 0, .del_f = 0};
-                        new_node = new TreeNode(new_key, c);
-                        P.root = P.insertRecursive(P.root, new_node); 
-
-                        new_state[e] -= 2; new_key = state_conversion(new_state,G);
-                        c = {.prob = 0, .v = {0}, .u = {0}, .w = {0}, .ctu = {0}, .dcu = 0, .state = new_state, .new_f = 0, .vuw_f = 0, .del_f = 0};
-                        new_node = new TreeNode(new_key, c);
-                        P.root = P.insertRecursive(P.root, new_node); 
+                }else{
+                    // Checking Edges
+                    for (int e = 0; e < DIM; e++){
+                        new_state = current_state; new_state[q] -= 1; 
+                        if(e != q){
+                            if(current_v[e] > 0){
+                                if(r->cell.i_nodes[q]->cell.k_nodes[e] == dead){
+                                    new_state[e] += 1; 
+                                    new_key = state_conversion(new_state,G);
+                                    Cell c = {.prob = 0, .v = {0}, .u = {0}, .w = {0}, .ctu = {0}, .dcu = 0, .state = new_state, .new_f = 0, .ik_f = 0, .del_f = 0};
+                                    TreeNode* new_node = new TreeNode(new_key, c);
+                                    P.root = P.insertRecursive(P.root, new_node);
+                                    // J = (0.5)*(pow(new_state[2]*G.del[2]+G.epoch[2],2)+pow(new_state[3]*G.del[3]+G.epoch[3],2))-(0.5)*(pow(new_state[0]*G.del[0]+G.epoch[0],2)+pow(new_state[1]*G.del[1]+G.epoch[1],2))-((1-lyap.mu)/pow(pow(new_state[0]*G.del[0]+G.epoch[0]+lyap.mu,2)+pow(new_state[1]*G.del[1]+G.epoch[1],2),0.5))-((lyap.mu)/pow(pow(new_state[0]*G.del[0]+G.epoch[0]-1+lyap.mu,2)+pow(new_state[1]*G.del[1]+G.epoch[1],2),0.5));
+                                    // if((J >= lyap.jacobi_bounds[0])&&(J <= lyap.jacobi_bounds[1])){
+                                    //     new_key = state_conversion(new_state,G);
+                                    //     Cell c = {.prob = 0, .v = {0}, .u = {0}, .w = {0}, .ctu = {0}, .dcu = 0, .state = new_state, .new_f = 0, .ik_f = 0, .del_f = 0};
+                                    //     TreeNode* new_node = new TreeNode(new_key, c);
+                                    //     P.root = P.insertRecursive(P.root, new_node);
+                                    // }
+                                }
+                            }else if (current_v[e] < 0){
+                                if(r->cell.i_nodes[q]->cell.i_nodes[e] == dead){
+                                    new_state[e] -= 1; 
+                                    new_key = state_conversion(new_state,G);
+                                    Cell c = {.prob = 0, .v = {0}, .u = {0}, .w = {0}, .ctu = {0}, .dcu = 0, .state = new_state, .new_f = 0, .ik_f = 0, .del_f = 0};
+                                    TreeNode* new_node = new TreeNode(new_key, c);
+                                    P.root = P.insertRecursive(P.root, new_node);
+                                    // J = (0.5)*(pow(new_state[2]*G.del[2]+G.epoch[2],2)+pow(new_state[3]*G.del[3]+G.epoch[3],2))-(0.5)*(pow(new_state[0]*G.del[0]+G.epoch[0],2)+pow(new_state[1]*G.del[1]+G.epoch[1],2))-((1-lyap.mu)/pow(pow(new_state[0]*G.del[0]+G.epoch[0]+lyap.mu,2)+pow(new_state[1]*G.del[1]+G.epoch[1],2),0.5))-((lyap.mu)/pow(pow(new_state[0]*G.del[0]+G.epoch[0]-1+lyap.mu,2)+pow(new_state[1]*G.del[1]+G.epoch[1],2),0.5));
+                                    // if((J >= lyap.jacobi_bounds[0])&&(J <= lyap.jacobi_bounds[1])){
+                                    //     new_key = state_conversion(new_state,G);
+                                    //     Cell c = {.prob = 0, .v = {0}, .u = {0}, .w = {0}, .ctu = {0}, .dcu = 0, .state = new_state, .new_f = 0, .ik_f = 0, .del_f = 0};
+                                    //     TreeNode* new_node = new TreeNode(new_key, c);
+                                    //     P.root = P.insertRecursive(P.root, new_node);
+                                    // }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -351,18 +413,10 @@ TreeNode* GBEES::create_neighbors_d(Grid G, Traj lyap, TreeNode* r){
 };
 
 TreeNode* GBEES::prune_tree(Grid G, Traj lyap, TreeNode* r){
-    /*
-    if(G.DIFF_B){
-        mark_cells_d(G, r); 
-    }else{
-        mark_cells(G, r); 
-    }
-    */
-
     mark_cells(G, r); 
     P.root = delete_cells(G, r); 
     normalize_tree(G, P.root); 
-    Initialize_vuw(G,lyap,P.root);  
+    Initialize_ik_nodes(G,P.root); 
 
     return P.root; 
 };
@@ -374,12 +428,11 @@ void GBEES::mark_cells(Grid G, TreeNode* r){
     mark_cells(G, r->left);
     mark_cells(G, r->right);
 
-    r->cell.vuw_f = 0; bool DELETE = true; 
+    r->cell.ik_f = 0; bool DELETE = true; 
     if (r->cell.prob < G.thresh){
         
         for(int q = 0; q < DIM; q++){
             // Looking at Backwards Node
-
             if(r->cell.i_nodes[q]!=dead){
                 if ((r->cell.i_nodes[q]->cell.v[q]>0)&&(r->cell.i_nodes[q]->cell.prob >= G.thresh)){
                     DELETE = false; 
@@ -392,7 +445,7 @@ void GBEES::mark_cells(Grid G, TreeNode* r){
                                 break; 
                             }
 
-                            if ((r->cell.i_nodes[q]->cell.k_nodes[e]->cell.v[q]>0)&&(r->cell.i_nodes[q]->cell.k_nodes[e]->cell.v[e]<0)&&(r->cell.i_nodes[q]->cell.i_nodes[e]->cell.prob >= G.thresh)){
+                            if ((r->cell.i_nodes[q]->cell.k_nodes[e]->cell.v[q]>0)&&(r->cell.i_nodes[q]->cell.k_nodes[e]->cell.v[e]<0)&&(r->cell.i_nodes[q]->cell.k_nodes[e]->cell.prob >= G.thresh)){
                                 DELETE = false; 
                                 break; 
                             }
@@ -414,68 +467,6 @@ void GBEES::mark_cells(Grid G, TreeNode* r){
                             }
 
                             if ((r->cell.k_nodes[q]->cell.k_nodes[e]->cell.v[q]<0)&&(r->cell.k_nodes[q]->cell.k_nodes[e]->cell.v[e]<0)&&(r->cell.k_nodes[q]->cell.k_nodes[e]->cell.prob >= G.thresh)){ 
-                                DELETE = false; 
-                                break; 
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        if(DELETE){
-            r->cell.del_f = 1; 
-        }
-    }
-};
-
-void GBEES::mark_cells_d(Grid G, TreeNode* r){
-    if (r==NULL){
-        return;
-    }
-    mark_cells_d(G, r->left);
-    mark_cells_d(G, r->right);
-
-    r->cell.vuw_f = 0; bool DELETE = true; 
-    if (r->cell.prob < G.thresh){
-        
-        for(int q = 0; q < DIM; q++){
-            // Looking at Backwards Node
-
-            if(r->cell.i_nodes[q]!=dead){
-                if (r->cell.i_nodes[q]->cell.prob >= G.thresh){ 
-                    DELETE = false; 
-                    break; 
-                }else{
-                    for (int e = 0; e < DIM; e++){
-                        if(e!=q){
-                            if (r->cell.i_nodes[q]->cell.i_nodes[e]->cell.prob >= G.thresh){
-                                DELETE = false; 
-                                break; 
-                            }
-
-                            if (r->cell.i_nodes[q]->cell.k_nodes[e]->cell.prob >= G.thresh){ 
-                                DELETE = false; 
-                                break; 
-                            }
-                        }
-                    }
-                }
-            }
-            // Looking at Forwards Node
-            if(r->cell.k_nodes[q]!=dead){
-                if (r->cell.k_nodes[q]->cell.prob >= G.thresh){ 
-                    DELETE = false; 
-                    break; 
-                }else{
-                    for (int e = 0; e < DIM; e++){
-                        if(e!=q){
-                            if (r->cell.k_nodes[q]->cell.i_nodes[e]->cell.prob >= G.thresh){ 
-                                DELETE = false; 
-                                break; 
-                            }
-
-                            if (r->cell.k_nodes[q]->cell.k_nodes[e]->cell.prob >= G.thresh){ 
                                 DELETE = false; 
                                 break; 
                             }
@@ -520,9 +511,8 @@ void GBEES::get_sum(Grid G, TreeNode* r, double& prob_sum){
     get_sum(G, r->right, prob_sum);
 
     if(r->cell.prob >= G.thresh){
-        a_count++; 
+        prob_sum += r->cell.prob;  
     }
-    prob_sum += r->cell.prob; 
     tot_count++; 
 };
 void GBEES::divide_sum(Grid G, TreeNode* r, double prob_sum){
@@ -533,6 +523,9 @@ void GBEES::divide_sum(Grid G, TreeNode* r, double prob_sum){
     divide_sum(G, r->right, prob_sum);
 
     r->cell.prob /= prob_sum; 
+    if(r->cell.prob >= G.thresh){
+        a_count++;
+    }
 };
 
 void GBEES::RHS(Grid G, Traj lyap){
@@ -553,13 +546,8 @@ void GBEES::get_dcu(Grid G, TreeNode* r){
             TreeNode* i_node = r->cell.i_nodes[q]; 
 
             double dcu_p, dcu_m;
-            if(G.DIFF_B){
-                dcu_p = (r->cell.w[q] * r->cell.prob + r->cell.u[q] * r->cell.k_nodes[q]->cell.prob) - (G.diff[q])*(r->cell.k_nodes[q]->cell.prob-r->cell.prob)/G.del[q];
-                dcu_m = (i_node->cell.w[q]*i_node->cell.prob + i_node->cell.u[q]*r->cell.prob)  - (G.diff[q])*(r->cell.prob-r->cell.i_nodes[q]->cell.prob)/G.del[q];
-            }else{
-                dcu_p = (r->cell.w[q] * r->cell.prob + r->cell.u[q] * r->cell.k_nodes[q]->cell.prob);
-                dcu_m = (i_node->cell.w[q]*i_node->cell.prob + i_node->cell.u[q]*r->cell.prob);
-            }
+            dcu_p = (r->cell.w[q] * r->cell.prob + r->cell.u[q] * r->cell.k_nodes[q]->cell.prob) - (G.diff[q])*(r->cell.k_nodes[q]->cell.prob-r->cell.prob)/G.del[q];
+            dcu_m = (i_node->cell.w[q]*i_node->cell.prob + i_node->cell.u[q]*r->cell.prob)  - (G.diff[q])*(r->cell.prob-r->cell.i_nodes[q]->cell.prob)/G.del[q];
             
             r->cell.dcu -= (G.dt/G.del[q])*(dcu_p-dcu_m); 
         }

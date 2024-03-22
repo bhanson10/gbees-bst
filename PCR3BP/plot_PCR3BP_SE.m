@@ -15,7 +15,7 @@ initialize_figures(rv2,const,norm);
 
 % Plotting MC trajectories
 for k=0:nm
-    DATA_PATH = append("./MC/Movie Data/Sun-Earth/M", num2str(k));
+    DATA_PATH = append("./MC/Trajectories/Sun-Earth/M", num2str(k));
     fileList = dir(fullfile(DATA_PATH, '*.txt'));  % List only .txt files
     numFiles = numel(fileList); 
     
@@ -167,7 +167,7 @@ for k=0:nm
     end
     
     %Plotting MC dots
-    DATA_PATH = append("./MC/Data/Sun-Earth/M", num2str(k));
+    DATA_PATH = append("./MC/Epochs/Sun-Earth/M", num2str(k));
     fileList = dir(fullfile(DATA_PATH, '*.txt'));  % List only .txt files
     numFiles = numel(fileList);
     

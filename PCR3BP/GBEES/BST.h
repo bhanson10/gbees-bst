@@ -22,38 +22,32 @@ class Traj{
     public: 
         double mu; 
         double T;
-        //double jacobi_bounds[2] = {1E10, -1E10}; 
+        double jacobi_bounds[2]; 
 };
 
 class Cell{  // Cell - data connected to a given cell
     public:
-        int new_f; 
-        int vuw_f; 
-        int del_f; 
-
         double prob;
-        double dcu; 
-        double cfl_dt;
-
         std::array <double, DIM> v; 
         std::array <double, DIM> u; 
         std::array <double, DIM> w; 
         std::array <double, DIM> ctu; 
+        double dcu; 
         std::array <int, DIM> state; 
+        int new_f; 
+        int ik_f; 
+        int del_f; 
         std::array<TreeNode*, DIM> i_nodes; 
         std::array<TreeNode*, DIM> k_nodes; 
+        double cfl_dt;
 };
 
 class Grid{ // Properties of the grid
   public:       
-    bool DIFF_B;
-
     int d;
     int pair;     
-
     double thresh;        
     double dt;
-
     std::array<double,DIM> epoch;
     std::array<double, DIM> del;
     std::array <double, DIM> diff;  
@@ -248,7 +242,7 @@ void BST::writeFile(std::ofstream& myfile, Grid G, TreeNode* r){
     writeFile(myfile, G, r->left);
     writeFile(myfile, G, r->right);
 
-    if (r->cell.prob > G.thresh){
+    if (r->cell.prob >= G.thresh){
         myfile << r->cell.prob;
         for(int q = 0; q < DIM; q++){
             myfile << " " << G.del[q]*r->cell.state[q]+G.epoch[q];

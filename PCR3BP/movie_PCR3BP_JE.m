@@ -33,8 +33,8 @@ end
 %Plotting GBEES PDFs
 count = 1; 
 %for k=0:nm
-for k=0:2
-    fileList = dir(fullfile("./GBEES/Movie Data/M" + num2str(k), '*.txt'));  % List only .txt files
+for k=0:nm
+    fileList = dir(fullfile("./GBEES/Movie Data/Jupiter-Europa/M" + num2str(k), '*.txt'));  % List only .txt files
     numFiles = numel(fileList);
     
     %{
@@ -82,13 +82,13 @@ for k=0:2
 
     %for i=0:numFiles-1
     for i=[0,numFiles-1]
-        FILE_PATH = "./GBEES/Movie Data/M" + num2str(k) + "/pdf_" + num2str(i) + ".txt"; 
+        FILE_PATH = "./GBEES/Movie Data/Jupiter-Europa/M" + num2str(k) + "/pdf_" + num2str(i) + ".txt"; 
         fileID = fopen(FILE_PATH, 'r'); 
         t = str2double(fgetl(fileID));
         
         [D.P, D.j, D.n] = parseGBEES(FILE_PATH, norm, const);
         sgtitle(['Measurement ', num2str(k+1), ', t=', sprintf('%.*f', 4, (t+(k*2.09435))*const.TU/3600), ' hr'],'Interpreter','Latex','FontSize',16);
-        Plot_PDF(D,i,k);
+        Plot_PDF(D,i,k,t);
         
         frames(count) = getframe(gcf); 
         if(k==0)
@@ -107,8 +107,8 @@ for k=0:2
     end
 end
 
-frames1(end+1) = frames2(1);
-frames2(end+1) = frames3(1); 
+%frames1(end+1) = frames2(1);
+%frames2(end+1) = frames3(1); 
 
 %create_video(frames,  'PCR3BP_JE.mp4');
 %create_video(frames1, 'PCR3BP_JE_1.mp4');
@@ -193,7 +193,7 @@ function create_video(F, title)
     close(writerObj);
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function Plot_PDF(D,flag1,flag2)        
+function Plot_PDF(D,flag1,flag2,t)        
     x_list = unique(D.j(:,1));
     y_list = unique(D.j(:,2));
     vx_list = unique(D.j(:,3));
@@ -223,7 +223,7 @@ function Plot_PDF(D,flag1,flag2)
     max_vel_P = max(vel_Pfull,[],'all'); vel_Pfull = vel_Pfull.*(1/max_vel_P); 
     
     subplot(1,2,1);
-    if((flag1==0)||(flag1==20)||(flag1==40)||(flag1==61))
+    if((abs(t-0)<1e-5)||(abs(t-0.698118)<1e-5)||(abs(t-1.39624)<1e-5)||(abs(t-2.09435)<1e-5))
         contour(X,Y,pos_Pfull,6, 'LineWidth',1, 'Fill', 'on',  'FaceAlpha', 0.7, 'HandleVisibility', 'off');
     else
         contour(X,Y,pos_Pfull,6, 'LineWidth',1, 'Fill', 'on',  'FaceAlpha', 0.7);
@@ -232,7 +232,7 @@ function Plot_PDF(D,flag1,flag2)
     drawnow; 
 
     subplot(1,2,2);
-    if((flag1==0)||(flag1==20)||(flag1==40)||(flag1==61))
+    if((abs(t-0)<1e-5)||(abs(t-0.698118)<1e-5)||(abs(t-1.39624)<1e-5)||(abs(t-2.09435)<1e-5))
         contour(VX,VY,vel_Pfull,6, 'LineWidth',1, 'Fill', 'on',  'FaceAlpha', 0.7, 'HandleVisibility', 'off');
     else
         contour(VX,VY,vel_Pfull,6, 'LineWidth',1, 'Fill', 'on',  'FaceAlpha', 0.7);

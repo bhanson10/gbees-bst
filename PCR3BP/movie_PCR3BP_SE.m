@@ -13,53 +13,6 @@ const.T = po2(9); nm = 0; size = 500;
 norm = 0; % 0: plot is in real units, 1: plot is normalized
 initialize_figures(rv2,const,norm); 
 
-% Plotting MC trajectories
-for k=0:nm
-    DATA_PATH = append("./MC/Movie Data/Sun-Earth/M", num2str(k));
-    fileList = dir(fullfile(DATA_PATH, '*.txt'));  % List only .txt files
-    numFiles = numel(fileList); 
-    
-    x_mc = zeros(size,numFiles);
-    y_mc = zeros(size,numFiles);
-    vx_mc = zeros(size,numFiles);
-    vy_mc = zeros(size,numFiles);
-    for i=0:numFiles-1
-        FILE_PATH = DATA_PATH + "/MC_" + num2str(i) + ".txt"; 
-        fileID = fopen(FILE_PATH, 'r'); 
-        t = str2double(fgetl(fileID)); 
-        
-        count = 1; 
-        while(count <= size)
-            line = split(fgetl(fileID)); % Read a line as a string
-            x_mc(count, i+1) = str2double(line{1});
-            y_mc(count, i+1) = str2double(line{2});
-            vx_mc(count, i+1) = str2double(line{3});
-            vy_mc(count, i+1) = str2double(line{4});
-            count = count + 1; 
-        end
-
-        % Close the file
-        fclose(fileID);
-    end
-
-    for i=1:size
-        if(norm)
-            subplot(1,2,1); 
-            plot(x_mc(i,:),y_mc(i,:),'Color', '[0.85 0.85 0.85 0.5]','linewidth',0.3, 'HandleVisibility','off');
-            drawnow; 
-            subplot(1,2,2); 
-            plot(vx_mc(i,:),vy_mc(i,:),'Color', '[0.85 0.85 0.85 0.5]','linewidth',0.3, 'HandleVisibility','off'); 
-        else
-            subplot(1,2,1); 
-            plot(x_mc(i,:).*const.LU,y_mc(i,:).*const.LU,'Color', '[0.85 0.85 0.85 0.5]', 'linewidth',0.3,'HandleVisibility','off'); 
-            drawnow;
-            subplot(1,2,2); 
-            plot(vx_mc(i,:).*(const.LU/const.TU),vy_mc(i,:).*(const.LU/const.TU),'Color', '[0.85 0.85 0.85 0.5]', 'linewidth',0.3,'HandleVisibility','off'); 
-        end
-    end
-end
-drawnow; 
-
 % Full Trajectory
 Y0 = rv1.start; tspan = [0 const1.T]; 
 options = odeset('RelTol', 1e-13); % Setting a tolerance
@@ -103,7 +56,7 @@ end
 
 %Plotting GBEES PDFs
 count = 1; 
-for k=0:0
+for k=0:nm
     fileList = dir(fullfile("./GBEES/Movie Data/Sun-Earth/M" + num2str(k), '*.txt'));  % List only .txt files
     numFiles = numel(fileList);
 
@@ -114,8 +67,9 @@ for k=0:0
         
         [D.P, D.j, D.n] = parseGBEES(FILE_PATH, norm, const);
         sgtitle(['Measurement ', num2str(k+1), ', t=', sprintf('%.*f', 4, t*const.TU/3600), ' hr'],'Interpreter','Latex','FontSize',16);
-        Plot_PDF(D,i,k);
+        Plot_PDF(D,i,k,t);
         
+        pause(1); 
         frames(count) = getframe(gcf); 
         subplot(1,2,1);
         delete(findobj(gca, 'Type', 'Contour'));
@@ -126,7 +80,7 @@ for k=0:0
     end
 end
 
-%create_video(frames, 'PCR3BP_SE.mp4');
+create_video(frames, 'PCR3BP_SE.mp4');
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %                              FUNCTIONS
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -185,7 +139,7 @@ function initialize_figures(rv,const,norm)
 
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function Plot_PDF(D,flag1,flag2)        
+function Plot_PDF(D,flag1,flag2,t)        
     x_list = unique(D.j(:,1));
     y_list = unique(D.j(:,2));
     vx_list = unique(D.j(:,3));
@@ -215,7 +169,7 @@ function Plot_PDF(D,flag1,flag2)
     max_vel_P = max(vel_Pfull,[],'all'); vel_Pfull = vel_Pfull.*(1/max_vel_P); 
     
     subplot(1,2,1);
-    if((flag1==0)||(flag1==12)||(flag1==24)||(flag1==36)||(flag1==48)||(flag1==60))
+    if((abs(t-0)<1e-5)||(abs(t-0.00523597)<1e-5)||(abs(t-0.0104719)<1e-5)||(abs(t-0.0157079)<1e-5)||(abs(t-0.0209439)<1e-5)||(abs(t-0.0261799)<1e-5)||(abs(t-0.0314158)<1e-5))
         contour(X,Y,pos_Pfull,6, 'LineWidth',1, 'Fill', 'on',  'FaceAlpha', 0.7, 'HandleVisibility', 'off');
     else
         contour(X,Y,pos_Pfull,6, 'LineWidth',1, 'Fill', 'on',  'FaceAlpha', 0.7);
@@ -224,7 +178,7 @@ function Plot_PDF(D,flag1,flag2)
     drawnow; 
 
     subplot(1,2,2);
-    if((flag1==0)||(flag1==12)||(flag1==24)||(flag1==36)||(flag1==48)||(flag1==60))
+    if((abs(t-0)<1e-5)||(abs(t-0.00523597)<1e-5)||(abs(t-0.0104719)<1e-5)||(abs(t-0.0157079)<1e-5)||(abs(t-0.0209439)<1e-5)||(abs(t-0.0261799)<1e-5)||(abs(t-0.0314158)<1e-5))
         contour(VX,VY,vel_Pfull,6, 'LineWidth',1, 'Fill', 'on',  'FaceAlpha', 0.7, 'HandleVisibility', 'off');
     else
         contour(VX,VY,vel_Pfull,6, 'LineWidth',1, 'Fill', 'on',  'FaceAlpha', 0.7);
