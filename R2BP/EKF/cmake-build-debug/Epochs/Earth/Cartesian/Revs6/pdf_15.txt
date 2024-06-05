@@ -1,0 +1,10 @@
+22223.3
+
+-138.159 -616.806 -7050.31 7.50335 -0.00623253 -0.0712401 
+
+nan nan nan nan nan nan 
+nan nan nan nan nan nan 
+nan nan nan nan nan nan 
+nan nan nan nan nan nan 
+nan nan nan nan nan nan 
+nan nan nan nan nan nan 

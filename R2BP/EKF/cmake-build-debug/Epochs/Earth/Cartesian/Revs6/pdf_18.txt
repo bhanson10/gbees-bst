@@ -1,0 +1,10 @@
+26668
+
+-7148.62 -0.335388 -3.8336 0.00403997 -0.647533 -7.40154 
+
+nan nan nan nan nan nan 
+nan nan nan nan nan nan 
+nan nan nan nan nan nan 
+nan nan nan nan nan nan 
+nan nan nan nan nan nan 
+nan nan nan nan nan nan 
