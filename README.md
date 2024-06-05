@@ -1,5 +1,5 @@
 # Grid-based, Bayesian Estimation Exploiting Sparsity (GBEES)
-The "GBEES" repsository containes the codebase accompying the paper "State Estimation of Chaotic Trajectories: A Higher-Dimensional, Grid-Based, Bayesian Approach to Uncertainty Propagation" presented at the January 2024 AIAA/AAS Space Flight Mechanics Meeting. Below is an in-depth summary explaining the proper usage of all the software included in said repository. In all, the codebase provides the computational framework necessary to: <br> 
+The "GBEES" repository contains the codebase accompanying the paper "State Estimation of Chaotic Trajectories: A Higher-Dimensional, Grid-Based, Bayesian Approach to Uncertainty Propagation" presented at the January 2024 AIAA/AAS Space Flight Mechanics Meeting. Below is an in-depth summary explaining the proper usage of all the software included in said repository. In all, the codebase provides the computational framework necessary to: <br> 
 1. Efficiently, continuous-time propagate an initially Gaussian distribution governed by the dynamics of a nonlinear system <br>
 2. Perform discrete measurement updates at given epochs via Bayes theorem <br>
 3. Compare the accuracy of said propagation with a Particle Filter (PF)/Monte Carlo (MC) simulation of similar resolution <br>
