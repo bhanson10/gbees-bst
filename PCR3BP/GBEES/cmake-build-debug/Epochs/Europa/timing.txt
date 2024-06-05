@@ -1,0 +1,17 @@
+Program time: 4.2e-08 s, Sim. time: 0 TU, Active/Total Cells: 22961/26002, Max key %: 1.54824e-13%
+Program time: 23.904 s, Sim. time: 0.0648655 TU, Active/Total Cells: 22364/32266, Max key %: 1.25408e-11%
+Program time: 33.2236 s, Sim. time: 0.129731 TU, Active/Total Cells: 22342/32364, Max key %: 7.50578e-11%
+Program time: 40.5529 s, Sim. time: 0.194597 TU, Active/Total Cells: 23946/36766, Max key %: 2.57271e-10%
+Program time: 49.8394 s, Sim. time: 0.259462 TU, Active/Total Cells: 27626/44880, Max key %: 6.58926e-10%
+Program time: 58.549 s, Sim. time: 0.324328 TU, Active/Total Cells: 34161/53803, Max key %: 1.32349e-09%
+Program time: 68.8136 s, Sim. time: 0.389193 TU, Active/Total Cells: 43833/72024, Max key %: 2.39602e-09%
+Program time: 81.1372 s, Sim. time: 0.454059 TU, Active/Total Cells: 56758/91119, Max key %: 3.64025e-09%
+Program time: 98.1006 s, Sim. time: 0.518924 TU, Active/Total Cells: 73380/117117, Max key %: 5.31315e-09%
+Program time: 126.279 s, Sim. time: 0.58379 TU, Active/Total Cells: 94589/150571, Max key %: 6.90386e-09%
+Program time: 169.906 s, Sim. time: 0.648655 TU, Active/Total Cells: 120862/190729, Max key %: 8.14779e-09%
+Program time: 236.768 s, Sim. time: 0.713521 TU, Active/Total Cells: 153940/237531, Max key %: 9.55018e-09%
+Program time: 353.195 s, Sim. time: 0.778386 TU, Active/Total Cells: 195327/301215, Max key %: 1.36047e-08%
+Program time: 556.429 s, Sim. time: 0.843252 TU, Active/Total Cells: 248364/378890, Max key %: 3.04607e-08%
+Program time: 1082.94 s, Sim. time: 0.908117 TU, Active/Total Cells: 315570/480967, Max key %: 6.56588e-08%
+Program time: 2528.41 s, Sim. time: 0.972983 TU, Active/Total Cells: 398468/599821, Max key %: 1.3019e-07%
+Program time: 6123.43 s, Sim. time: 1.03785 TU, Active/Total Cells: 496054/745773, Max key %: 2.29343e-07%

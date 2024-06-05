@@ -1,0 +1,17 @@
+Program time: 4.2e-08 s, Sim. time: 0 TU
+Program time: 0.00477992 s, Sim. time: 0.0648655 TU
+Program time: 0.0102418 s, Sim. time: 0.129731 TU
+Program time: 0.0149085 s, Sim. time: 0.194597 TU
+Program time: 0.0196853 s, Sim. time: 0.259462 TU
+Program time: 0.0243503 s, Sim. time: 0.324328 TU
+Program time: 0.0298324 s, Sim. time: 0.389193 TU
+Program time: 0.0345443 s, Sim. time: 0.454059 TU
+Program time: 0.0400382 s, Sim. time: 0.518924 TU
+Program time: 0.0448372 s, Sim. time: 0.58379 TU
+Program time: 0.0527477 s, Sim. time: 0.648655 TU
+Program time: 0.0574752 s, Sim. time: 0.713521 TU
+Program time: 0.0621654 s, Sim. time: 0.778386 TU
+Program time: 0.0666281 s, Sim. time: 0.843252 TU
+Program time: 0.071282 s, Sim. time: 0.908117 TU
+Program time: 0.0758375 s, Sim. time: 0.972983 TU
+Program time: 0.0803273 s, Sim. time: 1.03785 TU

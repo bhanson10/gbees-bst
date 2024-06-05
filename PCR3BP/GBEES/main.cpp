@@ -1,161 +1,129 @@
-/*==============================================================================================================+
+//
+// Created by Benjamin Hanson on 5/7/24.
+//
 
-MAIN.CPP
-
-===============================================================================================================*/
-#include "GBEES.h"
+#include "BST.h"
 
 int main(){
 
     //===================================== Begin User Input ====================================================
-    std::cout << "Reading in user inputs..." << std::endl; std::cout << std::endl; 
+    std::cout << "Reading in user inputs..." << std::endl; std::cout << std::endl;
 
-    const int NM = 1;                                            // Number of measurements 
-    std::string FILE_PATH = "./Data/Jupiter-Europa_LPO";         // Measurement file path
-    std::string FILE_PATH_M = "./Movie Data/Jupiter-Europa_LPO"; // Movie file path
+    Grid G(DIM);        // Grid object
+    G.thresh = 1E-7;       // Probability threshold
+    G.DIFF_B = false;      // Diffusion inclusion boolean
+    G.diff = {0, 0, 0, 0}; // Diffusion coefficient vector
+    bool OUTPUT = true;    // Write info to terminal
+    bool RECORD = true;    // Write PDFs to .txt file
+    int del_step = 10;     // Number of steps per deletion procedure
+    int num_dist = 16;     // Number of distributions recorded per revolution
+    int body = 0;          // 0: Europa
+    int mn = 0;            // #: M#
 
-    Grid G;                 // Grid object
-    G.thresh = 1E-7;        // Probability threshold
-    G.pair = 2;             // 1: Cantor, 2: Rosenberg
-    G.diff = {0, 0, 0, 0};  // Diffusion coefficient vector
-    bool OUTPUT = true;     // Print info to terminal
-    bool RECORD = true;     // Write PDFs to .txt file
-    bool RECORD_F = false;  // Write frequent PDFs to .txt file (for movie)
-    bool MEASURE = true;    // Take discrete measurement updates
-    int output_freq = 100;  // Number of steps per output to terminal
-    int record_f_freq = 25; // Number of steps per frequent record (for movie)
-    int del_step = 10;      // Number of steps per deletion procedure
-    int num_dist = 4;       // Number of distributions recorded per measurement
+    std::string FILE_PATH;
+    if (body == 0) {
+        FILE_PATH = "/Users/bhanson/Library/CloudStorage/OneDrive-UCSanDiego/UCSD/Research/GBEES/GBEES/PCR3BP/GBEES/cmake-build-debug/Epochs/Europa";
+    }
     //===========================================================================================================
 
     //===================================== Read in measurement/trajectory info =================================
-    std::cout << "Reading in discrete measurements..." << std::endl; std::cout << std::endl; 
+    std::cout << "Reading in discrete measurements..." << std::endl; std::cout << std::endl;
 
     std::ifstream measurement_file(FILE_PATH + "/measurements.txt"); // Measurement file
-    double means[NM][DIM]; 
-    double stds[NM][DIM];
-    int r = 0; 
-    std::string line; 
-    std::istringstream iss; 
+    double means[1][DIM];
+    int r = 0;
+    std::string line;
     std::getline(measurement_file, line); // Skip label line
-    while((std::getline(measurement_file, line))&&(r < NM)){
+    while((std::getline(measurement_file, line))&&(r < 1)){
         int c = 0;
         std::istringstream iss(line);
         while (std::getline(iss, line, ' ')){
-            if(c < DIM){
-                means[r][c] = std::stod(line); 
-            }else{
-                stds[r][c-DIM] = std::stod(line); 
-            }
+            means[r][c] = std::stod(line);
             c++;
         }
         r++;
     }
 
-    G.epoch = {means[0][0], means[0][1], means[0][2], means[0][3]};    // Grid initial epoch
-    G.del = {stds[0][0]/2, stds[0][1]/2, stds[0][2]/2, stds[0][3]/2};  // Grid width
-  
-    Traj lyap; // Trajectory object
+    r = 0;
+    std::getline(measurement_file, line); // Skip label line
+    while((std::getline(measurement_file, line))&&(r < DIM)){
+        int c = 0;
+        std::istringstream iss(line);
+        while (std::getline(iss, line, ' ')){
+            G.cov(r,c) = std::stod(line);
+            c++;
+        }
+        r++;
+    }
+
+    G.epoch = {means[0][0], means[0][1], means[0][2], means[0][3]}; // Grid initial epoch
+    G.del   = {pow(G.cov(0,0),0.5)/2, pow(G.cov(1,1),0.5)/2, pow(G.cov(2,2),0.5)/2, pow(G.cov(3,3),0.5)/2}; // Grid width
+
+    Traj lyap{}; // Trajectory object
     std::getline(measurement_file, line); // Skip label line
     std::getline(measurement_file, line); lyap.mu = std::stod(line); // Read in mu
     std::getline(measurement_file, line); // Skip label line
     std::getline(measurement_file, line); lyap.T = std::stod(line);  // Read in T
 
-    double measure_time = lyap.T/NM;            // Time between measurements
-    double record_time = measure_time/(num_dist-1); // Time between recording PDF
+    double record_time = lyap.T/(num_dist); // Time between recording PDF
 
-    Measurement m; 
+    Measurement m{};
     m.mean = {means[0][0], means[0][1], means[0][2], means[0][3]}; // Measurement mean
-    m.std = {stds[0][0], stds[0][1], stds[0][2], stds[0][3]};      // Measurement std
+    m.std  = {pow(G.cov(0,0),0.5), pow(G.cov(1,1),0.5), pow(G.cov(2,2),0.5), pow(G.cov(3,3),0.5)}; // Measurement std
 
     measurement_file.close();
     //===========================================================================================================
+    BST P;
 
-    //==================================++=== Time-marching n-dimensional PDF ===========++======================
-    GBEES D; D.a_count = 0; D.tot_count = 1; D.cfl_min_dt = 1E10;
+    std::cout << "Initializing Distribution...\n" << std::endl;
 
-    std::cout << "Initializing Distribution..." << std::endl; std::cout << std::endl; 
-    
-    D.Initialize_D(G,lyap, m);     // Create initial GBEES distribtion
-    D.normalize_tree(G, D.P.root); // Normalize distribution
+    P.initialize_grid(G, lyap, m);  // Create initial GBEES distribution
+    P.normalize_tree(G, P.root); // Normalize distribution
+    P.prune_tree(G,P.root);      // Prune tree
 
-    std::cout << "Entering time marching..." << std::endl; std::cout << std::endl; 
+    std::cout << "Entering time marching...\n" << std::endl;
 
-    auto start = std::chrono::high_resolution_clock::now(); // Timing object
-    std::chrono::duration<double> elapsed;
+    auto start = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> elapsed{};
 
-    double tt = 0; int nm = 0; int record_count, step_count, record_f_count; double rt, mt;
+    auto finish = std::chrono::high_resolution_clock::now(); elapsed = finish - start; uint64_t key = 0; P.max_key(G, P.root, key);
+    std::cout << "Program time: " << elapsed.count() << " s, Sim. time: " << 0 << " TU";
+    std::cout << ", Active/Total Cells: " << P.a_count << "/" << P.tot_count << ", Max key %: " << (double(key)/(pow(2,64)-1))*(100) << '%' << std::endl;
+    if(RECORD){std::string filename = FILE_PATH + "/M" + std::to_string(mn) + "/pdf_0.txt";  P.record_data(filename, G, 0);};
+
+    double tt = 0; double rt; int record_count = 1; int step_count = 0;
     while(tt < lyap.T){ // Time of uncertainty propagation
+        rt = 0;
+        while(rt < record_time){ // Time between recording the PDF
 
-        auto finish = std::chrono::high_resolution_clock::now(); elapsed = finish - start; uint64_t key = 0; D.max_key(G, D.P.root, key); 
-        std::cout << "Timestep: " << nm << "-0, Program time: " << elapsed.count() << " s, Sim. time: " << tt;
-        std::cout << " TU, Active/Total Cells: " << D.a_count << "/" << D.tot_count << ", Max key %: " << (key/(pow(2,64)-1))*(100) << '%' << std::endl; 
-        if(RECORD){std::string filename = FILE_PATH + "/M" + std::to_string(nm) + "/pdf_0.txt"; D.Record_Data(filename, G, D.P.root, 0);}; 
-        if(RECORD_F){std::string filename = FILE_PATH_M + "/M" + std::to_string(nm) + "/pdf_0.txt"; D.Record_Data(filename, G, D.P.root, 0);};
+            P.grow_tree_1(G,lyap);
+            P.check_cfl_condition(G, P.root);
+            G.dt = std::min(P.cfl_min_dt, record_time-rt); rt += G.dt;
+            P.godunov_method(G);
+            P.update_prob(G, P.root);
+            P.normalize_tree(G, P.root);
 
-        mt = 0; step_count = 0; record_count = 1; record_f_count = 1; 
-        while(mt < measure_time){ // Time between measurements 
-            rt = 0; 
-
-            while(rt < record_time){ // Time between recording the PDF
-                D.grow_tree(G,lyap); D.check_CFL_condition(G, D.P.root, D.cfl_min_dt); G.dt = std::min(D.cfl_min_dt, record_time-rt); rt += G.dt;  
-                D.RHS(G, lyap); D.update_prob(G, D.P.root); D.normalize_tree(G, D.P.root);  
-
-                if (step_count % del_step == 0){ // Deletion procedure
-                    D.P.root = D.prune_tree(G, lyap, D.P.root);
-                } 
-                
-                step_count+=1; 
-                if((OUTPUT)&&(step_count % output_freq == 0)){ // Print info to terminal
-                    auto finish = std::chrono::high_resolution_clock::now(); elapsed = finish - start; uint64_t key = 0; D.max_key(G, D.P.root, key); 
-                    std::cout << "Timestep: " << nm << "-" << step_count << ", Program time: " << elapsed.count() << " s, Sim. time: " << tt + mt + rt;
-                    std::cout << " TU, Active/Total Cells: " << D.a_count << "/" << D.tot_count << ", Max key %: " << (key/(pow(2,64)-1))*(100) << '%' << std::endl; 
-                }    
-
-                if((RECORD_F)&&(step_count % record_f_freq == 0)){ // Record Movie data
-                    std::string filename = FILE_PATH_M + "/M" + std::to_string(nm) + "/pdf_" + std::to_string(record_f_count) + ".txt"; D.Record_Data(filename, G, D.P.root, mt + rt);
-                    record_f_count+=1;
-                }
-
-                D.cfl_min_dt = 1E10; 
-            }
-            if((OUTPUT)&&(step_count % output_freq != 0)){
-                finish = std::chrono::high_resolution_clock::now(); elapsed = finish - start; uint64_t key = 0; D.max_key(G, D.P.root, key); 
-                std::cout << "Timestep: " << nm << "-" << step_count << ", Program time: " << elapsed.count() << " s, Sim. time: " << tt + mt + rt;
-                std::cout << " TU, Active/Total Cells: " << D.a_count << "/" << D.tot_count << ", Max key %: " << (key/(pow(2,64)-1))*(100) << '%' << std::endl; 
-            }
- 
-            if(RECORD){ // Record PDF 
-                std::cout << std::endl; 
-                std::cout << "RECORDING PDF AT: " << tt + mt + rt << " TU..." << std::endl;
-                std::cout << std::endl; 
-                std::string filename = FILE_PATH + "/M" + std::to_string(nm) + "/pdf_" + std::to_string(record_count) + ".txt"; D.Record_Data(filename, G, D.P.root, mt + rt);
-                record_count+=1; 
-            }
-            if(RECORD_F){ // Record PDF 
-                std::string filename = FILE_PATH_M + "/M" + std::to_string(nm) + "/pdf_" + std::to_string(record_f_count) + ".txt"; D.Record_Data(filename, G, D.P.root, mt + rt);
-                record_f_count+=1; 
+            if (step_count % del_step == 0){ // Deletion procedure
+                P.prune_tree(G,P.root);
             }
 
-            mt += rt; 
+            P.cfl_min_dt = 1E10;
         }
 
-        tt += mt; 
+        tt += rt;
 
-        if((MEASURE)&&(tt < lyap.T)){ // Perform discrete measurement update
-            std::cout << std::endl; 
-            std::cout << "PERFORMING BAYESIAN UPDATE AT: " << tt << " TU..." << std::endl;
-            std::cout << std::endl; 
-            nm+=1; 
-
-            Measurement m; 
-            m.mean = {means[nm][0], means[nm][1], means[nm][2], means[nm][3]}; 
-            m.std = {stds[nm][0], stds[nm][1], stds[nm][2], stds[nm][3]}; 
-            D.measurement_update(m, G, D.P.root); D.normalize_tree(G, D.P.root);
-            D.P.root = D.prune_tree(G, lyap, D.P.root); // Deletion procedure
+        if(OUTPUT){
+            finish = std::chrono::high_resolution_clock::now(); elapsed = finish - start;
+            key = 0; P.max_key(G, P.root, key);
+            std::cout << "Program time: " << elapsed.count() << " s, Sim. time: " << tt << " TU";
+            std::cout << ", Active/Total Cells: " << P.a_count << "/" << P.tot_count << ", Max key %: " << (double(key)/(pow(2,64)-1))*(100) << '%' << std::endl;
         }
-        
+
+        if(RECORD){ // Record PF Scatter Plot
+            std::string filename = FILE_PATH + "/M" + std::to_string(mn) + "/pdf_" + std::to_string(record_count) + ".txt"; P.record_data(filename, G, tt);
+            record_count+=1;
+        }
     }
+
     return 0;
-    //===========================================================================================================
 }
