@@ -27,17 +27,20 @@ Here is a breakdown of all of the files within the examples provided, as well as
 
 <div align="center">
   
-| x (LU)      | y (LU)      | vx (LU/TU)  | vy (LU/TU)  | dx (LU)     | dy (LU)     | dvx (LU/TU) | dvy (LU/TU) |
-|    :----:   |    :----:   |    :----:   |    :----:   |    :----:   |    :----:   |    :----:   |    :----:   |
-| x1          | y1          | vx1         | vy1         | dx1         | dy1         | dvx1        | dvy1        |
-| x1          | y1          | vx1         | vy1         | dx2         | dy2         | dvx2        | dvy2        |
-| x1          | y1          | vx1         | vy1         | dx3         | dy3         | dvx3        | dvy3        |
-| ...         | ...         | ...         | ...         | ...         | ...         | ...         | ...         |
-|             |             |             |             |             |             |             |             |
-| mu          |             |             |             |             |             |             |             |
-| mu1         |             |             |             |             |             |             |             |
-| T (TU)      |             |             |             |             |             |             |             |
-| T           |             |             |             |             |             |             |             |
+|           x (LU)           |           y (LU)           |          vx (LU/TU)           |          vy (LU/TU)           | 
+|:--------------------------:|:--------------------------:|:-----------------------------:|:-----------------------------:|
+|             x0             |             y0             |              vx0              |              vy0              |
+|                            |                            |                               |                               |
+|          dx (LU)           |          dy (LU)           |          dvx (LU/TU)          |          dvy (LU/TU)          | 
+|        $\sigma_x^2$        |  $\sigma_x\cdot\sigma_y$   |  $\sigma_x\cdot\sigma_{vx}$   |  $\sigma_x\cdot\sigma_{vy}$   |
+|  $\sigma_y\cdot\sigma_x$   |        $\sigma_y^2$        |  $\sigma_y\cdot\sigma_{vx}$   |  $\sigma_y\cdot\sigma_{vy}$   |
+| $\sigma_{vx}\cdot\sigma_x$ | $\sigma_{vx}\cdot\sigma_y$ |        $sigma_{vx}^2$         | $\sigma_{vx}\cdot\sigma_{vy}$ |
+| $\sigma_{vy}\cdot\sigma_x$ | $\sigma_{vy}\cdot\sigma_y$ | $\sigma_{vy}\cdot\sigma_{vx}$ |        $\sigma_{vy}^2$        |
+|                            |                            |                               |                               |
+|           $\mu$            |                            |                               |                               |
+|          $\mu_1$           |                            |                               |                               |
+|           T (TU)           |                            |                               |                               |
+|             T              |                            |                               |                               |
 
 </div>
 
