@@ -14,8 +14,8 @@ int main(){
     //=================================== Read in initial discrete measurement =================================//
     printf("\nReading in initial discrete measurement...\n\n");
 
-    char* P_DIR = "./Data/Lorenz3D/PDFs"; // Saved PDFs path
-    char* M_DIR = "./Data/Lorenz3D/Measurements"; // Measurement path
+    char* P_DIR = "./data/Lorenz3D/PDFs"; // Saved PDFs path
+    char* M_DIR = "./data/Lorenz3D/Measurements/M0"; // Measurement path
     char* M_FILE = "/measurement0.txt"; 
     Meas M = Meas_create(DIM, M_DIR, M_FILE);
     //==========================================================================================================//

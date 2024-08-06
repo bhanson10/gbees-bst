@@ -24,8 +24,8 @@ int main(){
     //=================================== Read in initial discrete measurement =================================//
     printf("\nReading in initial discrete measurement...\n\n");
 
-    char* P_DIR = "./Data/PCR3BP/PDFs"; // Saved PDFs path
-    char* M_DIR = "./Data/PCR3BP/Measurements"; // Measurement path
+    char* P_DIR = "/Users/bhanson/Library/CloudStorage/OneDrive-UCSanDiego/UCSD/Conferences/AAS-AIAA2025/AAS-AIAA2025/results/gbees/PCR3BP/PDFs"; // Saved PDFs path
+    char* M_DIR = "./measurements/PCR3BP/M0"; // Measurement path
     char* M_FILE = "/measurement0.txt"; 
     Meas M = Meas_create(DIM, M_DIR, M_FILE);
     //==========================================================================================================//

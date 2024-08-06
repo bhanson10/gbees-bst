@@ -19,8 +19,8 @@ int main(){
     //=================================== Read in initial discrete measurement =================================//
     printf("\nReading in initial discrete measurement...\n\n");
 
-    char* P_DIR = "./Data/CR3BP/PDFs"; // Saved PDFs path
-    char* M_DIR = "./Data/CR3BP/Measurements"; // Measurement path
+    char* P_DIR = "./data/CR3BP/PDFs"; // Saved PDFs path
+    char* M_DIR = "./data/CR3BP/Measurements/M0"; // Measurement path
     char* M_FILE = "/measurement0.txt"; 
     Meas M = Meas_create(DIM, M_DIR, M_FILE);
     //==========================================================================================================//
@@ -39,6 +39,7 @@ int main(){
 
     bool OUTPUT = true;                            // Write info to terminal
     bool RECORD = true;                            // Write PDFs to .txt file
+    bool BOUNDS = true;                            // Add inadmissible regions to grid
     bool MEASURE = true;                           // Take discrete measurement updates
     int OUTPUT_FREQ = 1;                           // Number of steps per output to terminal
     int DEL_STEP = 20;                             // Number of steps per deletion procedure
@@ -48,7 +49,7 @@ int main(){
 
     //================================================= GBEES ==================================================//
     
-    run_gbees(CR3BP, G, M, T, P_DIR, M_DIR, NUM_DIST, NUM_MEAS, DEL_STEP, OUTPUT_FREQ, DIM, OUTPUT, RECORD, MEASURE);
+    run_gbees(CR3BP, NULL, G, M, T, P_DIR, M_DIR, NUM_DIST, NUM_MEAS, DEL_STEP, OUTPUT_FREQ, DIM, OUTPUT, RECORD, MEASURE, BOUNDS);
 
     return 0;
 }
