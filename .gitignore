@@ -1,11 +1,5 @@
 *.DS_Store
 *.json
 *.pyc
-/c/data/CR3BP/PDFs
-/c/data/Lorenz3D/PDFs
-/c/data/PCR3BP/PDFs
-/python/data/Lorenz3D/PDFs
-/python/data/PCR3BP/PDFs
-/python/data/CR3BP/PDFs
 /examples/Lorenz3D/results
 /examples/PCR3BP/results
