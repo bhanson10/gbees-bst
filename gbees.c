@@ -482,6 +482,7 @@ TreeNode* delete_node(TreeNode* r, uint64_t k, Grid G){
             r->new_f = temp->new_f;
             r->ik_f = temp->ik_f;
             r->del_f = temp->del_f;
+            r->bound_val = temp->bound_val; 
             r->right = delete_node(r->right, temp->key, G);
         }
     }
