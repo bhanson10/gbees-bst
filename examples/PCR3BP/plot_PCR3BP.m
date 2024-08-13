@@ -69,12 +69,12 @@ drawnow;
 %% GBEES
 NM = 1; 
 p.color = 'b'; p.alpha = [0.2, 0.4, 0.6]; 
-P_DIR = "<path_to_pdf/P>";
+P_DIR = "<path_to_pdf>";
 
 count = 1;
 for nm=0:NM-1
 
-    P_DIR_SUB = P_DIR + num2str(nm); 
+    P_DIR_SUB = P_DIR + "/P" + num2str(nm); 
     FILE_LIST = dir(fullfile(P_DIR_SUB, '*.txt'));  % List only .txt files
     num_files = numel(FILE_LIST);
     
