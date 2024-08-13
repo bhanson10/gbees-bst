@@ -14,9 +14,9 @@ def Lorenz3D(x, dx, coef):
 #==================================== Read in initial discrete measurement ==================================#
 print("\nReading in initial discrete measurement...\n\n")
 
-P_DIR = "./results/python"    # Saved PDFs path
-M_DIR = "."                   # Measurement path
-M_FILE = "/measurement.txt"; # Measurement file
+P_DIR = "<path_to_pdf>"     # Saved PDFs path
+M_DIR = "./"                # Measurement path
+M_FILE = "measurement.txt"; # Measurement file
 M = gbees.Meas_create(DIM, M_DIR, M_FILE)
 #============================================================================================================#
 
