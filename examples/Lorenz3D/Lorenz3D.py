@@ -1,6 +1,6 @@
 import sys
 sys.path.append('../../')
-import gbeespy as gbees
+import gbeespy as gbees # type: ignore
 
 DIM = 3
 
@@ -16,7 +16,7 @@ print("\nReading in initial discrete measurement...\n\n")
 
 P_DIR = "./results/python"    # Saved PDFs path
 M_DIR = "."                   # Measurement path
-M_FILE = "/measurement0.txt"; # Measurement file
+M_FILE = "/measurement.txt"; # Measurement file
 M = gbees.Meas_create(DIM, M_DIR, M_FILE)
 #============================================================================================================#
 
