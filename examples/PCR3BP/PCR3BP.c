@@ -29,32 +29,31 @@ int main(){
     //=================================== Read in initial discrete measurement =================================//
     printf("\nReading in initial discrete measurement...\n\n");
 
-    char* P_DIR = "./results/c";        // Saved PDFs path
-    char* M_DIR = ".";                  // Measurement path
-    char* M_FILE = "/measurement0.txt"; // Measurement file
+    char* P_DIR = "<path_to_pdf>";     // Saved PDFs path
+    char* M_DIR = ".";                 // Measurement path
+    char* M_FILE = "/measurement.txt"; // Measurement file
     Meas M = Meas_create(DIM, M_DIR, M_FILE);
     //==========================================================================================================//
 
     //========================================== Read in user inputs ===========================================//
     printf("Reading in user inputs...\n\n");
 
-    double del[DIM];                               // Grid width, default is half of the std. dev. from the initial measurement 
+    double del[DIM];                              // Grid width, default is half of the std. dev. from the initial measurement 
     for(int i = 0; i < DIM; i ++){
         del[i] = pow(M.cov[i][i],0.5)/2;
     }
-    Grid G = Grid_create(DIM, 1E-7, M.mean, del);  // Inputs: (dimension, probability threshold, center, grid width)       
+    Grid G = Grid_create(DIM, 1E-7, M.mean, del); // Inputs: (dimension, probability threshold, center, grid width)       
 
-    double coef[] = {2.528017528540000E-5};        // PCR3BP trajectory attributes (mu)
-    Traj T = Traj_create(1, coef);                 // Inputs: (# of coefficients, coefficients)
-
-    int NUM_DIST = 17;                             // Number of distributions recorded per measurement
-    int NUM_MEAS = 1;                              // Number of measurements
-    int DEL_STEP = 20;                             // Number of steps per deletion procedure
-    int OUTPUT_FREQ = 20;                          // Number of steps per output to terminal
-    bool OUTPUT = false;                           // Write info to terminal
-    bool RECORD = true;                            // Write PDFs to .txt file
-    bool MEASURE = true;                           // Take discrete measurement updates
-    bool BOUNDS = true;                            // Add inadmissible regions to grid
+    double coef[] = {2.528017528540000E-5};       // PCR3BP trajectory attributes (mu)
+    Traj T = Traj_create(1, coef);                // Inputs: (# of coefficients, coefficients)
+    int NUM_DIST = 17;                            // Number of distributions recorded per measurement
+    int NUM_MEAS = 1;                             // Number of measurements
+    int DEL_STEP = 20;                            // Number of steps per deletion procedure
+    int OUTPUT_FREQ = 20;                         // Number of steps per output to terminal
+    bool OUTPUT = false;                          // Write info to terminal
+    bool RECORD = true;                           // Write PDFs to .txt file
+    bool MEASURE = true;                          // Take discrete measurement updates
+    bool BOUNDS = true;                           // Add inadmissible regions to grid
     //==========================================================================================================//
 
     //================================================= GBEES ==================================================//
