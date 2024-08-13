@@ -1,6 +1,0 @@
-*.DS_Store
-*.json
-*.pyc
-*.so
-/examples/Lorenz3D/results
-/examples/PCR3BP/results
