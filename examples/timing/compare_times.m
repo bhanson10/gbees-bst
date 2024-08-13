@@ -1,7 +1,7 @@
 clear all; close all; clc; 
 
 mkrs = {"-o", "-square", "->", "-pentagram"}; 
-MDL = "PCR3BP";
+MDL = "<model_type>";
 DIR = {"c", "python"}; 
 TU = 1; 
 names = {'c implementation','python wrapper'};
@@ -39,7 +39,6 @@ ylabel("Number of cells", 'FontSize', 18, 'FontName', 'Times');
 xlim([0, sti(end).*TU]); 
 
 nexttile; ax = gca; 
-l = legend; l.Location = "Northwest"; l.FontSize = 14; l.FontName = "Times"; 
 set(ax, 'FontName' , 'Times','FontSize',14);
 xlabel("Simulation time " + time_unit, 'FontSize', 18, 'FontName', 'Times');
 
