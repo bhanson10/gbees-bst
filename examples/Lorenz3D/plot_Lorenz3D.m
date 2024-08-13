@@ -31,7 +31,7 @@ plot3(x(:,1),x(:,2),x(:,3),'k-','linewidth',2,'DisplayName','Nominal'); drawnow;
 %% GBEES
 NM = 1; 
 p.color = "cyan"; p.alpha = [0.3, 0.5, 0.7]; 
-P_DIR = "./results/c/P"; % or "./results/python/P";
+P_DIR = "<path_to_pdf/P>";
 
 count = 1;
 for nm=0:NM-1

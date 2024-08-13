@@ -69,7 +69,7 @@ drawnow;
 %% GBEES
 NM = 1; 
 p.color = 'b'; p.alpha = [0.2, 0.4, 0.6]; 
-P_DIR = "./results/c/P"; % or "./results/python/P";
+P_DIR = "<path_to_pdf/P>";
 
 count = 1;
 for nm=0:NM-1
