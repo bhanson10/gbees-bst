@@ -1,6 +1,6 @@
 import sys
 sys.path.append('../../')
-import gbeespy as gbees 
+import gbeespy as gbees  # type: ignore
 
 DIM = 4
 
@@ -16,7 +16,7 @@ def PCR3BP(x, dx, coef):
 
 # This function defines the initial grid boundaries - optional
 def PCR3BP_J(x, coef):
-    r1 = ((x[0]+coef[0])**2+((x[1])**2))**0.5
+    r1 = ((x[0]+coef[0])**2+(x[1])**2)**0.5
     r2 = ((x[0]-1+coef[0])**2+(x[1])**2)**0.5
     J = (x[0])**2.0 + (x[1])**2.0 + (2*(1-coef[0])/r1) + (2*coef[0]/r2) + coef[0]*(1 - coef[0]) - ((x[2])**2.0 + (x[3])**2.0)
     return J
@@ -24,9 +24,9 @@ def PCR3BP_J(x, coef):
 #==================================== Read in initial discrete measurement ==================================#
 print("\nReading in initial discrete measurement...\n\n")
 
-P_DIR = "./results/python"    # Saved PDFs path
-M_DIR = "."                   # Measurement path
-M_FILE = "/measurement0.txt"; # Measurement file
+P_DIR = "<path_to_pdf>"      # Saved PDFs path
+M_DIR = "."                  # Measurement path
+M_FILE = "/measurement.txt"; # Measurement file
 M = gbees.Meas_create(DIM, M_DIR, M_FILE)
 #============================================================================================================#
 
