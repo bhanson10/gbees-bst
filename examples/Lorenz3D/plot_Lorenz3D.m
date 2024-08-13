@@ -3,44 +3,61 @@ close all; clc; clear all;
 % plot_Lorenz3D.m
 % Benjamin Hanson, 2024
 
-%% Initial Condition
-const.d = 3; const.T = 1; const.dx=0.5; const.sigma=4; const.b=1; const.r=48;
-rv.start=[-11.5; -10; 9.5]; rv.unc = [1; 1; 1];
+%% initializing system properties
+prop.d = 3; prop.T = 1; prop.dx = 0.5; prop.sigma = 4; prop.b = 1; prop.r = 48;
+ic = [-11.5; -10; 9.5]; 
 
-%% Initializing Figures
+%% initializing figure
 initialize_figures(); 
 
-%% Truth
-tspan = [0 50];
-x0 = rv.start;  
-options = odeset('RelTol', 1e-13); % Setting a tolerance
-[t, x] = ode87(@(t, x) Lorenz3D(t, x ,const), tspan, x0, options);
+%% truth
+options = odeset('MaxStep', 1E-3, 'InitialStep', 1E-3, 'RelTol', 1e-6);
+[~, x] = ode87(@(t, x) Lorenz3D(t, x ,prop), [0 50], ic, options);
 
-figure(1);
-plot3(x(:,1),x(:,2),x(:,3),'g-','linewidth',1.5,'HandleVisibility','off');  
+nexttile(1); 
+plot3(x(:,1), x(:,2), x(:,3), 'g-','linewidth', 1.5, 'HandleVisibility', 'off');  
 drawnow;
 
-Y0 = rv.start; tspan = [0 const.T]; 
-options = odeset('RelTol', 1e-13); % Setting a tolerance
-[t, x] = ode87(@(t, x) Lorenz3D(t, x,const), tspan, Y0, options);
+[~, x] = ode87(@(t, x) Lorenz3D(t, x, prop), [0 prop.T], ic, options);
 plot3(x(:,1),x(:,2),x(:,3),'k-','linewidth',2,'DisplayName','Nominal'); drawnow;
 
-figure(2);
+nexttile(2); 
 plot3(x(:,1),x(:,2),x(:,3),'k-','linewidth',2,'DisplayName','Nominal'); drawnow;
+
+%% monte carlo
+n = 500; 
+P = diag([1, 1, 1]);
+x0_mc = mvnrnd(ic,P,n);
+xf_mc = []; 
+tspan = [0,prop.T]; 
+for i=1:n
+    [~, x] = ode87(@(t, x) Lorenz3D(t, x, prop), tspan, x0_mc(i,:), options);
+    xf_mc(i,:) = x(end,:); 
+end
+
+nexttile(1);
+scatter3(x0_mc(:,1), x0_mc(:,2), x0_mc(:,3), 20, 'k', 'filled', 'MarkerEdgeColor', 'none', 'MarkerFaceAlpha', 0.2);
+scatter3(xf_mc(:,1), xf_mc(:,2), xf_mc(:,3), 20, 'k', 'filled', 'MarkerEdgeColor', 'none', 'MarkerFaceAlpha', 0.2);
+drawnow; 
+
+nexttile(2);
+scatter3(x0_mc(:,1), x0_mc(:,2), x0_mc(:,3), 20, 'k', 'filled', 'MarkerEdgeColor', 'none', 'MarkerFaceAlpha', 0.2);
+scatter3(xf_mc(:,1), xf_mc(:,2), xf_mc(:,3), 20, 'k', 'filled', 'MarkerEdgeColor', 'none', 'MarkerFaceAlpha', 0.2);
+drawnow; 
 
 %% GBEES
 NM = 1; 
 p.color = "cyan"; p.alpha = [0.3, 0.5, 0.7]; 
-P_DIR = "<path_to_pdf/P>";
+P_DIR = "<path_to_pdf>";
 
 count = 1;
 for nm=0:NM-1
 
-    P_DIR_SUB = P_DIR + num2str(nm); 
+    P_DIR_SUB = P_DIR + "/P" + num2str(nm); 
     FILE_LIST = dir(fullfile(P_DIR_SUB, '*.txt'));  % List only .txt files
     num_files = numel(FILE_LIST);
     
-    for i=0:num_files-1
+    for i=[0:num_files-1]
         P_FILE = P_DIR_SUB + "/pdf_" + num2str(i) + ".txt";
 
         [x_gbees, P_gbees, n_gbees, t_gbees(count)] = parse_nongaussian_txt(P_FILE);
@@ -50,9 +67,9 @@ for nm=0:NM-1
             xest_gbees{count} = xest_gbees{count}+x_gbees(j,:).*P_gbees(j);
         end
 
-        figure(1); 
+        nexttile(1); 
         plot_nongaussian_surface(x_gbees,P_gbees,[normpdf(1)/normpdf(0), normpdf(2)/normpdf(0), normpdf(3)/normpdf(0)],p);
-        figure(2); 
+        nexttile(2);  
         plot_nongaussian_surface(x_gbees,P_gbees,normpdf(3)/normpdf(0), p);
         drawnow; 
         
@@ -62,13 +79,16 @@ end
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %                              FUNCTIONS                                  %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function f=Lorenz3D(t, x,const)                          
-    f=[const.sigma*(x(2)-x(1));  -x(2)-x(1)*x(3);  -const.b*x(3)+x(1)*x(2)-const.b*const.r];
+function f=Lorenz3D(t, x,prop)                          
+    f=[prop.sigma*(x(2)-x(1));  -x(2)-x(1)*x(3);  -prop.b*x(3)+x(1)*x(2)-prop.b*prop.r];
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function initialize_figures()
 
-    f1 = figure(1); clf; hold all; f1.Position = [150 200 600 475];
+    f1 = figure(1); clf; hold all; f1.Position = [150 200 1200 475];
+    tiledlayout(1, 2, 'TileSpacing','compact');
+
+    nexttile(1); hold all; 
     view(-109,14); lighting phong; light('Position',[-1 0 0]); 
     set(gca, 'FontName' , 'Times','FontSize',12);
     xlabel("x", 'FontSize', 18, 'FontName', 'Times', 'Position',[-10 44 -26]);
@@ -85,7 +105,7 @@ function initialize_figures()
     zticks([-30 -20 -10 0 10 20 30])
     zticklabels({'-30','-20','-10','0','10', '20', '30'})
     
-    f2 = figure(2); clf; hold all; f2.Position = [750 200 600 475];
+    nexttile(2); hold all; 
     view(-109,14); lighting phong; light('Position',[-1 0 0]);
     set(gca, 'FontName' , 'Times','FontSize',12);
     xlabel("x", 'FontSize', 18, 'FontName', 'Times', 'Position',[-10 44 -26]);
@@ -102,7 +122,6 @@ function initialize_figures()
     zticks([-30 -20 -10 0 10 20 30])
     zticklabels({'-30','-20','-10','0','10', '20', '30'})
     set(gca, 'FontName' , 'Times');
-
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function [x, P, n, t] = parse_nongaussian_txt(filename)
