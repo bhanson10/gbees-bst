@@ -1,4 +1,4 @@
-#include "gbees.h"
+#include "../../gbees.c"
 
 #define DIM 6
 
@@ -23,16 +23,17 @@ void CR3BP(double* x, double* dx, double* coef){
 double CR3BP_J(double* x, double* coef){
     double r1 = pow(pow(x[0]+coef[0],2)+pow(x[1],2)+pow(x[2],2), 0.5);
     double r2 = pow(pow(x[0]-1+coef[0],2)+pow(x[1],2)+pow(x[2],2), 0.5);
-    return pow(x[0], 2.0) + pow(x[1], 2.0) + (2*(1-coef[0])/r1) + (2*coef[0]/r2) + coef[0]*(1 - coef[0]) - (pow(x[3], 2.0) + pow(x[4], 2.0) + pow(x[4], 2.0));
+    double J = pow(x[0], 2.0) + pow(x[1], 2.0) + (2*(1-coef[0])/r1) + (2*coef[0]/r2) + coef[0]*(1 - coef[0]) - (pow(x[3], 2.0) + pow(x[4], 2.0) + pow(x[5], 2.0));
+    return J;
 }
 
 int main(){
     //=================================== Read in initial discrete measurement =================================//
     printf("\nReading in initial discrete measurement...\n\n");
 
-    char* P_DIR = "/Users/bhanson/Library/CloudStorage/OneDrive-UCSanDiego/UCSD/Conferences/AAS-AIAA2025/AAS-AIAA2025/results/CR3BP/gbees/PDF0"; // Saved PDFs path
-    char* M_DIR = "./measurements/CR3BP/M0"; // Measurement path
-    char* M_FILE = "/measurement0.txt"; 
+    char* P_DIR = "<path_to_pdf>";    // Saved PDFs path
+    char* M_DIR = "./";               // Measurement path
+    char* M_FILE = "measurement.txt"; // Measurement file
     Meas M = Meas_create(DIM, M_DIR, M_FILE);
     //==========================================================================================================//
 
@@ -48,14 +49,14 @@ int main(){
     double coef[] = {2.528017528540000E-5};        // CR3BP trajectory attributes (mu)
     Traj T = Traj_create(1, coef);                 // Inputs: (# of coefficients, coefficients)
 
-    bool OUTPUT = true;                            // Write info to terminal
-    bool RECORD = true;                            // Write PDFs to .txt file
-    bool BOUNDS = true;                            // Add inadmissible regions to grid
-    bool MEASURE = true;                           // Take discrete measurement updates
-    int OUTPUT_FREQ = 1;                           // Number of steps per output to terminal
+    int OUTPUT_FREQ = 20;                          // Number of steps per output to terminal
     int DEL_STEP = 20;                             // Number of steps per deletion procedure
     int NUM_DIST = 17;                             // Number of distributions recorded per measurement
     int NUM_MEAS = 1;                              // Number of measurements
+    bool OUTPUT = true;                            // Write info to terminal after certain amount of steps
+    bool RECORD = true;                            // Write PDFs to .txt file
+    bool BOUNDS = true;                            // Add inadmissible regions to grid
+    bool MEASURE = true;                           // Take discrete measurement updates
     //==========================================================================================================//
 
     //================================================= GBEES ==================================================//
