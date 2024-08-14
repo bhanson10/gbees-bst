@@ -544,12 +544,12 @@ TreeNode* balance(TreeNode* r){
 /*==============================================================================
                         GBEES FUNCTION DEFINITIONS
 ==============================================================================*/
-void initialize_vuw(void (*ADV_F)(double*, double*, double*), TreeNode* r, Grid* G, Traj T){
+void initialize_adv(void (*ADV_F)(double*, double*, double*), TreeNode* r, Grid* G, Traj T){
     if(r == NULL){ 
         return;
     }
-    initialize_vuw(ADV_F, r->left, G, T);
-    initialize_vuw(ADV_F, r->right, G, T);
+    initialize_adv(ADV_F, r->left, G, T);
+    initialize_adv(ADV_F, r->right, G, T);
     
     if(r->new_f==0){
         double x[G->dim];
@@ -617,7 +617,7 @@ void initialize_grid(void (*ADV_F)(double*, double*, double*), TreeNode** P, Gri
     int current_state[G->dim]; double current_state_vec[G->dim];
     recursive_loop(P, G, M, T, 0, current_state, current_state_vec, BOUNDS, BOUND_F);
     *P = balance(*P); 
-    initialize_vuw(ADV_F, *P, G, T);
+    initialize_adv(ADV_F, *P, G, T);
     initialize_ik_nodes(*P, *P, G);
 }
 
@@ -864,7 +864,7 @@ void create_neighbors(TreeNode** P, TreeNode* r, Grid G, Traj T, bool BOUNDS, do
 void grow_tree(void (*ADV_F)(double*, double*, double*), TreeNode** P, Grid G, Traj T, bool BOUNDS, double (*BOUND_F)(double*, double*)){
     create_neighbors(P, *P, G, T, BOUNDS, BOUND_F);
     *P = balance(*P); 
-    initialize_vuw(ADV_F, *P, &G, T);
+    initialize_adv(ADV_F, *P, &G, T);
     initialize_ik_nodes(*P, *P, &G);
 }
 
