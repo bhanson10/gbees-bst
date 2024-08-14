@@ -163,8 +163,6 @@ typedef struct TreeNode {
     uint64_t key;
     double prob;
     double *v;
-    double *u;
-    double *w;
     double *ctu;
     int *state;
     TreeNode **i_nodes;
@@ -188,18 +186,14 @@ TreeNode* TreeNode_create(int dim, uint64_t key, double prob, int* state, double
     node->key = key;
     node->prob = prob; 
     node->v = (double*)malloc(dim * sizeof(double));
-    node->u = (double*)malloc(dim * sizeof(double));
-    node->w = (double*)malloc(dim * sizeof(double));
     node->ctu = (double*)malloc(dim * sizeof(double));
     node->state = (int*)malloc(dim * sizeof(int));
     node->i_nodes = (TreeNode **)malloc(dim * sizeof(TreeNode *));
     node->k_nodes = (TreeNode **)malloc(dim * sizeof(TreeNode *));
 
     // Check for memory allocation failure
-    if (node->v == NULL || node->u == NULL || node->w == NULL || node->ctu == NULL || node->state == NULL || node->i_nodes == NULL || node->k_nodes == NULL) {
+    if (node->v == NULL || node->ctu == NULL || node->state == NULL || node->i_nodes == NULL || node->k_nodes == NULL) {
         if (node->v) free(node->v);
-        if (node->u) free(node->u);
-        if (node->w) free(node->w);
         if (node->ctu) free(node->ctu);
         if (node->state) free(node->state);
         if (node->i_nodes) free(node->i_nodes);
@@ -210,8 +204,6 @@ TreeNode* TreeNode_create(int dim, uint64_t key, double prob, int* state, double
 
     for (int i = 0; i < dim; i++) {
         node->v[i] = 0.0;
-        node->u[i] = 0.0;
-        node->w[i] = 0.0;
         node->ctu[i] = 0.0;
         node->state[i] = state[i];
         node->i_nodes[i] = NULL;
@@ -233,8 +225,6 @@ void Tree_free(TreeNode* r) {
     Tree_free(r->left);
     Tree_free(r->right);
     free(r->v);
-    free(r->u);
-    free(r->w);
     free(r->ctu);
     free(r->state);
     free(r->i_nodes);
@@ -244,8 +234,6 @@ void Tree_free(TreeNode* r) {
 
 void TreeNode_free(TreeNode* r) {
     free(r->v);
-    free(r->u);
-    free(r->w);
     free(r->ctu);
     free(r->state);
     free(r->i_nodes);
@@ -470,8 +458,6 @@ TreeNode* delete_node(TreeNode* r, uint64_t k, Grid G){
             r->prob = temp->prob; 
             for(int i = 0; i < G.dim; i++){
                 r->v[i] = temp->v[i]; 
-                r->u[i] = temp->u[i]; 
-                r->w[i] = temp->w[i]; 
                 r->ctu[i] = temp->ctu[i]; 
                 r->state[i] = temp->state[i]; 
                 r->i_nodes[i] = temp->i_nodes[i]; 
@@ -576,8 +562,6 @@ void initialize_vuw(void (*ADV_F)(double*, double*, double*), TreeNode* r, Grid*
         double sum = 0;
         for(int i = 0; i < G->dim; i++){
             r->v[i] = x[i];
-            r->u[i] = fmin(x[i], 0.0); 
-            r->w[i] = fmax(x[i], 0.0); 
             sum += fabs(r->v[i]) / G->dx[i];
         }
         r->new_f = 1;
@@ -911,12 +895,12 @@ void get_dcu(TreeNode* r, Grid G){
         double dcu_p = 0; double dcu_m = 0; 
 
         if(k_node != NULL){
-            dcu_p = r->w[i] * r->prob + r->u[i] * k_node->prob;
+            dcu_p = fmax(r->v[i], 0.0) * r->prob + fmin(r->v[i], 0.0) * k_node->prob;
         }else{
-            dcu_p = r->w[i] * r->prob;
+            dcu_p = fmax(r->v[i], 0.0) * r->prob;
         }
         if(i_node != NULL){
-            dcu_m = i_node->w[i]*i_node->prob + i_node->u[i]*r->prob;
+            dcu_m = fmax(i_node->v[i], 0.0)*i_node->prob + fmin(i_node->v[i], 0.0)*r->prob;
         }
 
         r->dcu -= (G.dt/G.dx[i])*(dcu_p-dcu_m);
@@ -940,14 +924,14 @@ void update_ctu(TreeNode* r, Grid G){
                     j_node = r->i_nodes[j];
                     p_node = i_node->i_nodes[j];
 
-                    r->ctu[j]      -= i_node->w[i] * r->w[j] * F;
-                    i_node->ctu[j] -= i_node->u[i] * i_node->w[j] * F;
+                    r->ctu[j]      -= fmax(i_node->v[i], 0.0) * fmax(r->v[j], 0.0) * F;
+                    i_node->ctu[j] -= fmin(i_node->v[i], 0.0) * fmax(i_node->v[j], 0.0) * F;
 
                     if(j_node!=NULL){
-                        j_node->ctu[j] -= i_node->w[i] * j_node->u[j] * F;
+                        j_node->ctu[j] -= fmax(i_node->v[i], 0.0) * fmin(j_node->v[j], 0.0) * F;
                     }
                     if(p_node!=NULL){
-                        p_node->ctu[j] -= i_node->u[i] * p_node->u[j] * F;
+                        p_node->ctu[j] -= fmin(i_node->v[i], 0.0) * fmin(p_node->v[j], 0.0) * F;
                     }
                 }
             }
