@@ -55,8 +55,6 @@ TreeNode._fields_ = [
     ("key", ct.c_ulong),
     ("prob", ct.c_double),
     ("v", ct.POINTER(ct.c_double)),
-    ("u", ct.POINTER(ct.c_double)),
-    ("w", ct.POINTER(ct.c_double)),
     ("ctu", ct.POINTER(ct.c_double)),
     ("state", ct.POINTER(ct.c_int)),
     ("i_nodes", ct.POINTER(ct.POINTER(TreeNode))),
