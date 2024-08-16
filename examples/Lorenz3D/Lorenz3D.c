@@ -14,13 +14,25 @@ void Lorenz3D(double* x, double* dx, double* coef){
     free(v); 
 }
 
+// This function defines the measurement model - required
+void identity(double* x, double* dx, double* coef){
+    double* v = (double*)malloc(DIM * sizeof(double)); 
+    v[0] = x[0];
+    v[1] = x[1];
+    v[2] = x[2];
+    for(int i = 0; i < DIM; i++){
+        x[i] = v[i];
+    }
+    free(v); 
+}
+
 int main(){
     //=================================== Read in initial discrete measurement =================================//
     printf("\nReading in initial discrete measurement...\n\n");
 
-    char* P_DIR = "<path_to_pdf>";    // Saved PDFs path
-    char* M_DIR = "./";               // Measurement path
-    char* M_FILE = "measurement.txt"; // Measurement file
+    char* P_DIR = "<path_to_pdf>";     // Saved PDFs path
+    char* M_DIR = "./measurements";    // Measurement path
+    char* M_FILE = "measurement0.txt"; // Measurement file
     Meas M = Meas_create(DIM, M_DIR, M_FILE);
     //==========================================================================================================//
 
@@ -38,16 +50,16 @@ int main(){
 
     int OUTPUT_FREQ = 20;                                     // Number of steps per output to terminal
     int DEL_STEP = 20;                                        // Number of steps per deletion procedure
-    int NUM_DIST = 6;                                         // Number of distributions recorded per measurement
-    int NUM_MEAS = 1;                                         // Number of measurements
+    int NUM_DIST = 5;                                         // Number of distributions recorded per measurement
+    int NUM_MEAS = 2;                                         // Number of measurements
     bool OUTPUT = true;                                       // Write info to terminal
     bool RECORD = true;                                       // Write PDFs to .txt file
     bool MEASURE = true;                                      // Take discrete measurement updates
-    bool BOUNDS = false;                                       // Add inadmissible regions to grid
+    bool BOUNDS = false;                                      // Add inadmissible regions to grid
     //==========================================================================================================//
 
     //================================================= GBEES ==================================================//
-    run_gbees(Lorenz3D, NULL, G, M, T, P_DIR, M_DIR, NUM_DIST, NUM_MEAS, DEL_STEP, OUTPUT_FREQ, DIM, OUTPUT, RECORD, MEASURE, BOUNDS);
+    run_gbees(Lorenz3D, identity, NULL, G, M, T, P_DIR, M_DIR, NUM_DIST, NUM_MEAS, DEL_STEP, OUTPUT_FREQ, DIM, OUTPUT, RECORD, MEASURE, BOUNDS);
 
     return 0;
 }
