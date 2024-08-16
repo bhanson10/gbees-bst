@@ -1,29 +1,20 @@
 #include "../../gbees.c"
 
-#define DIM 3
+#define DIM_f 3 // State dimension
+#define DIM_h 3 // Measurement dimension
 
 // This function defines the dynamics model - required
-void Lorenz3D(double* x, double* dx, double* coef){
-    double* v = (double*)malloc(DIM * sizeof(double)); 
-    v[0] = coef[0]*(x[1]-(x[0]+(dx[0]/2.0)));
-    v[1] = -(x[1]+(dx[1]/2.0))-x[0]*x[2];
-    v[2] = -coef[1]*(x[2]+(dx[2]/2.0))+x[0]*x[1]-coef[1]*coef[2];
-    for(int i = 0; i < DIM; i++){
-        x[i] = v[i];
-    }
-    free(v); 
+void Lorenz3D(double* f, double* x, double* dx, double* coef){
+    f[0] = coef[0]*(x[1]-(x[0]+(dx[0]/2.0)));
+    f[1] = -(x[1]+(dx[1]/2.0))-x[0]*x[2];
+    f[2] = -coef[1]*(x[2]+(dx[2]/2.0))+x[0]*x[1]-coef[1]*coef[2];
 }
 
 // This function defines the measurement model - required
-void identity(double* x, double* dx, double* coef){
-    double* v = (double*)malloc(DIM * sizeof(double)); 
-    v[0] = x[0];
-    v[1] = x[1];
-    v[2] = x[2];
-    for(int i = 0; i < DIM; i++){
-        x[i] = v[i];
-    }
-    free(v); 
+void identity(double* h, double* x, double* dx, double* coef){
+    h[0] = x[0];
+    h[1] = x[1];
+    h[2] = x[2];
 }
 
 int main(){
@@ -33,17 +24,17 @@ int main(){
     char* P_DIR = "<path_to_pdf>";     // Saved PDFs path
     char* M_DIR = "./measurements";    // Measurement path
     char* M_FILE = "measurement0.txt"; // Measurement file
-    Meas M = Meas_create(DIM, M_DIR, M_FILE);
+    Meas M = Meas_create(DIM_h, M_DIR, M_FILE);
     //==========================================================================================================//
 
     //========================================== Read in user inputs ===========================================//
     printf("Reading in user inputs...\n\n");
 
-    double dx[DIM];                                           // Grid width, default is half of the std. dev. from the initial measurement 
-    for(int i = 0; i < DIM; i ++){
+    double dx[DIM_f];                                           // Grid width, default is half of the std. dev. from the initial measurement 
+    for(int i = 0; i < DIM_f; i ++){
         dx[i] = pow(M.cov[i][i],0.5)/2;
     }
-    Grid G = Grid_create(DIM, 2E-5, M.mean, dx);              // Inputs: (dimension, probability threshold, center, grid width)       
+    Grid G = Grid_create(DIM_f, 2E-5, M.mean, dx);              // Inputs: (dimension, probability threshold, center, grid width)       
 
     double coef[] = {4.0, 1.0, 48.0};                         // Lorenz3D trajectory attributes (sigma, beta, r)
     Traj T = Traj_create(3, coef); // Inputs: (# of coefficients, coefficients)
@@ -59,7 +50,7 @@ int main(){
     //==========================================================================================================//
 
     //================================================= GBEES ==================================================//
-    run_gbees(Lorenz3D, identity, NULL, G, M, T, P_DIR, M_DIR, NUM_DIST, NUM_MEAS, DEL_STEP, OUTPUT_FREQ, DIM, OUTPUT, RECORD, MEASURE, BOUNDS);
+    run_gbees(Lorenz3D, identity, NULL, G, M, T, P_DIR, M_DIR, NUM_DIST, NUM_MEAS, DEL_STEP, OUTPUT_FREQ, OUTPUT, RECORD, MEASURE, BOUNDS);
 
     return 0;
 }

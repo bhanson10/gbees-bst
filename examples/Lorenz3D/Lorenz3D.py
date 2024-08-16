@@ -2,7 +2,8 @@ import sys
 sys.path.append('../../')
 import gbeespy as gbees # type: ignore
 
-DIM = 3
+DIM_f = 3 # State dimension
+DIM_h = 3 # Measurement dimension
 
 # This function defines the dynamics model - required
 def Lorenz3D(x, dx, coef):
@@ -11,6 +12,7 @@ def Lorenz3D(x, dx, coef):
     v3 = -coef[1]*(x[2] + (dx[2]/2.0)) + x[0]*x[1] - coef[1]*coef[2]
     return [v1, v2, v3]
 
+# This function defines the measurement model - required
 def identity(x, dx, coef):
     v1 = x[0]
     v2 = x[1]
@@ -23,16 +25,16 @@ print("\nReading in initial discrete measurement...\n\n")
 P_DIR = "<path_to_pdf>"      # Saved PDFs path
 M_DIR = "./measurements"     # Measurement path
 M_FILE = "measurement0.txt"; # Measurement file
-M = gbees.Meas_create(DIM, M_DIR, M_FILE)
+M = gbees.Meas_create(DIM_h, M_DIR, M_FILE)
 #============================================================================================================#
 
 #=========================================== Read in user inputs ============================================#
 print("Reading in user inputs...\n\n")
 
-dx = [None] * DIM                             # Grid width, default is half of the std. dev. from the initial measurement 
-for i in range(DIM):
+dx = [None] * DIM_f                             # Grid width, default is half of the std. dev. from the initial measurement 
+for i in range(DIM_h):
     dx[i] = (M.cov[i][i]**(0.5))/2
-G = gbees.Grid_create(DIM, 2E-5, M.mean, dx); # Inputs: (dimension, probability threshold, center, grid width)    
+G = gbees.Grid_create(DIM_f, 2E-5, M.mean, dx); # Inputs: (dimension, probability threshold, center, grid width)    
 
 coef = [4.0, 1.0, 48.0]                       # Lorenz3D trajectory attributes (sigma, beta, r)
 T = gbees.Traj_create(len(coef), coef);       # Inputs: (# of coefficients, coefficients)
@@ -48,4 +50,4 @@ BOUNDS = False;                               # Add inadmissible regions to grid
 #============================================================================================================#
 
 #================================================== GBEES ===================================================#
-gbees.run_gbees(Lorenz3D, identity, None, G, M, T, P_DIR, M_DIR, NUM_DIST, NUM_MEAS, DEL_STEP, OUTPUT_FREQ, DIM, OUTPUT, RECORD, MEASURE, BOUNDS)
+gbees.run_gbees(Lorenz3D, identity, None, G, M, T, P_DIR, M_DIR, NUM_DIST, NUM_MEAS, DEL_STEP, OUTPUT_FREQ, OUTPUT, RECORD, MEASURE, BOUNDS)
