@@ -4,7 +4,7 @@ close all; clc; clear all;
 % Benjamin Hanson, 2024
 
 %% initializing system properties
-prop.d = 3; prop.T = 1; prop.dx = 0.5; prop.sigma = 4; prop.b = 1; prop.r = 48;
+prop.d = 3; prop.T = 2; prop.dx = 0.5; prop.sigma = 4; prop.b = 1; prop.r = 48;
 ic = [-11.5; -10; 9.5]; 
 
 %% initializing figure
@@ -24,31 +24,10 @@ plot3(x(:,1),x(:,2),x(:,3),'k-','linewidth',2,'DisplayName','Nominal'); drawnow;
 nexttile(2); 
 plot3(x(:,1),x(:,2),x(:,3),'k-','linewidth',2,'DisplayName','Nominal'); drawnow;
 
-%% monte carlo
-n = 500; 
-P = diag([1, 1, 1]);
-x0_mc = mvnrnd(ic,P,n);
-xf_mc = []; 
-tspan = [0,prop.T]; 
-for i=1:n
-    [~, x] = ode87(@(t, x) Lorenz3D(t, x, prop), tspan, x0_mc(i,:), options);
-    xf_mc(i,:) = x(end,:); 
-end
-
-nexttile(1);
-scatter3(x0_mc(:,1), x0_mc(:,2), x0_mc(:,3), 20, 'k', 'filled', 'MarkerEdgeColor', 'none', 'MarkerFaceAlpha', 0.2);
-scatter3(xf_mc(:,1), xf_mc(:,2), xf_mc(:,3), 20, 'k', 'filled', 'MarkerEdgeColor', 'none', 'MarkerFaceAlpha', 0.2);
-drawnow; 
-
-nexttile(2);
-scatter3(x0_mc(:,1), x0_mc(:,2), x0_mc(:,3), 20, 'k', 'filled', 'MarkerEdgeColor', 'none', 'MarkerFaceAlpha', 0.2);
-scatter3(xf_mc(:,1), xf_mc(:,2), xf_mc(:,3), 20, 'k', 'filled', 'MarkerEdgeColor', 'none', 'MarkerFaceAlpha', 0.2);
-drawnow; 
-
 %% GBEES
-NM = 1; 
+NM = 2; 
 p.color = "cyan"; p.alpha = [0.3, 0.5, 0.7]; 
-P_DIR = "<path_to_pdf>";
+P_DIR = "./results/c";
 
 count = 1;
 for nm=0:NM-1
@@ -75,7 +54,17 @@ for nm=0:NM-1
         
         count = count + 1;
     end
+    p.color = "magenta"; 
 end
+
+clear L; clear LH; 
+LH(1) = fill(nan, nan, nan, 'FaceAlpha', 0.7, 'FaceColor', 'cyan', 'EdgeColor', 'none');
+L{1} = "{ } $M_0${   }";
+LH(2) = fill(nan, nan, nan, 'FaceAlpha', 0.7, 'FaceColor', 'magenta', 'EdgeColor', 'none');
+L{2} = "{ } $M_1$";
+leg = legend(LH, L, 'Orientation', 'Horizontal', 'FontSize', 18, 'FontName', 'times', 'Interpreter', 'latex');
+leg.Layout.Tile = 'south';
+drawnow; 
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %                              FUNCTIONS                                  %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -91,9 +80,9 @@ function initialize_figures()
     nexttile(1); hold all; 
     view(-109,14); lighting phong; light('Position',[-1 0 0]); 
     set(gca, 'FontName' , 'Times','FontSize',12);
-    xlabel("x", 'FontSize', 18, 'FontName', 'Times', 'Position',[-10 44 -26]);
-    ylabel("y", 'FontSize', 18, 'FontName', 'Times', 'Position',[0 -15 -42]);
-    zlabel("z", 'FontSize', 18, 'FontName', 'Times', 'Position',[0 47 8]);
+    xlabel("x", 'FontSize', 18, 'FontName', 'Times');
+    ylabel("y", 'FontSize', 18, 'FontName', 'Times');
+    zlabel("z", 'FontSize', 18, 'FontName', 'Times');
     set(get(gca,'ZLabel'), 'Rotation', 0);
     xlim([-20 20])
     xticks([-20 -10 0 10 20])
@@ -108,9 +97,9 @@ function initialize_figures()
     nexttile(2); hold all; 
     view(-109,14); lighting phong; light('Position',[-1 0 0]);
     set(gca, 'FontName' , 'Times','FontSize',12);
-    xlabel("x", 'FontSize', 18, 'FontName', 'Times', 'Position',[-10 44 -26]);
-    ylabel("y", 'FontSize', 18, 'FontName', 'Times', 'Position',[0 -15 -42]);
-    zlabel("z", 'FontSize', 18, 'FontName', 'Times', 'Position',[0 47 8]);
+    xlabel("x", 'FontSize', 18, 'FontName', 'Times');
+    ylabel("y", 'FontSize', 18, 'FontName', 'Times');
+    zlabel("z", 'FontSize', 18, 'FontName', 'Times');
     set(get(gca,'ZLabel'), 'Rotation', 0);
     xlim([-20 20])
     xticks([-20 -10 0 10 20])
