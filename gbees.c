@@ -21,7 +21,7 @@ typedef struct Meas {
 
 Meas Meas_create(int dim, const char* M_DIR, const char* M_FILE) {
     char M_PATH[256];
-    snprintf(M_PATH, sizeof(M_PATH), "%s%s", M_DIR, M_FILE);
+    snprintf(M_PATH, sizeof(M_PATH), "%s/%s", M_DIR, M_FILE);
 
     FILE *m_file = fopen(M_PATH, "r");
     if (m_file == NULL) {
@@ -370,10 +370,14 @@ double gauss_probability(int dim, double* x, Meas M){ // MC Calculate gaussian p
     double* M_inv = (double*)malloc(dim * dim * sizeof(double));
     double* M_inv_x = (double*)malloc(dim * sizeof(double));
     double exp_result;
-
+    
+    double diff[dim];
+    for(int i = 0; i < dim; i++){
+        diff[i] = x[i] - M.mean[i]; 
+    }
     invertMatrix(M, M_inv, dim);
-    multiplyMatrixVector(M_inv, x, M_inv_x, dim);
-    double dot_prod = dotProduct(x, M_inv_x, dim);
+    multiplyMatrixVector(M_inv, diff, M_inv_x, dim);
+    double dot_prod = dotProduct(diff, M_inv_x, dim);
     exp_result = exp(-0.5 * dot_prod);
 
     free(M_inv);
@@ -385,7 +389,7 @@ double gauss_probability(int dim, double* x, Meas M){ // MC Calculate gaussian p
 /*==============================================================================
                     BINARY SEARCH TREE FUNCTION DEFINITIONS
 ==============================================================================*/
-TreeNode* insert_recursive(TreeNode* r, Grid* G, Traj T, double prob, uint64_t key, int* state, bool BOUNDS, double (*BOUND_F)(double*, double*)) {
+TreeNode* insert_recursive(TreeNode* r, Grid* G, Traj T, double prob, uint64_t key, int* state, bool BOUNDS, double (*BOUND_f)(double*, double*)) {
     if (r == NULL) {
         if(BOUNDS){
             double x[G->dim];
@@ -393,7 +397,7 @@ TreeNode* insert_recursive(TreeNode* r, Grid* G, Traj T, double prob, uint64_t k
                 x[k] = G->dx[k]*state[k]+G->center[k];
             }
 
-            double J = BOUND_F(x, T.coef); 
+            double J = BOUND_f(x, T.coef); 
 
             if(J >= G->lo_bound && J <= G->hi_bound){
                 return TreeNode_create(G->dim, key, prob, state, J);
@@ -407,9 +411,9 @@ TreeNode* insert_recursive(TreeNode* r, Grid* G, Traj T, double prob, uint64_t k
     }
 
     if (key < r->key) {
-        r->left = insert_recursive(r->left, G, T, prob, key, state, BOUNDS, BOUND_F);
+        r->left = insert_recursive(r->left, G, T, prob, key, state, BOUNDS, BOUND_f);
     } else if (key > r->key) {
-        r->right = insert_recursive(r->right, G, T, prob, key, state, BOUNDS, BOUND_F);
+        r->right = insert_recursive(r->right, G, T, prob, key, state, BOUNDS, BOUND_f);
     }
 
     return r;
@@ -544,12 +548,12 @@ TreeNode* balance(TreeNode* r){
 /*==============================================================================
                         GBEES FUNCTION DEFINITIONS
 ==============================================================================*/
-void initialize_adv(void (*ADV_F)(double*, double*, double*), TreeNode* r, Grid* G, Traj T){
+void initialize_adv(void (*f)(double*, double*, double*), TreeNode* r, Grid* G, Traj T){
     if(r == NULL){ 
         return;
     }
-    initialize_adv(ADV_F, r->left, G, T);
-    initialize_adv(ADV_F, r->right, G, T);
+    initialize_adv(f, r->left, G, T);
+    initialize_adv(f, r->right, G, T);
     
     if(r->new_f==0){
         double x[G->dim];
@@ -557,7 +561,7 @@ void initialize_adv(void (*ADV_F)(double*, double*, double*), TreeNode* r, Grid*
             x[i] = G->dx[i]*r->state[i]+G->center[i];
         }
 
-        (*ADV_F)(x, G->dx, T.coef); 
+        (*f)(x, G->dx, T.coef); 
 
         double sum = 0;
         for(int i = 0; i < G->dim; i++){
@@ -596,11 +600,12 @@ void initialize_ik_nodes(TreeNode* P, TreeNode* r, Grid* G){
 }
 
 
-void recursive_loop(TreeNode** P, Grid* G, Meas M, Traj T, int level, int* current_state, double* current_state_vec, bool BOUNDS, double (*BOUND_F)(double*, double*)){
+void recursive_loop(void (*h)(double*, double*, double*), TreeNode** P, Grid* G, Meas M, Traj T, int level, int* current_state, double* current_state_vec, bool BOUNDS, double (*BOUND_f)(double*, double*)){
     if (level == G->dim) {
         uint64_t key = state_conversion(G->dim, current_state);
+        (*h)(current_state_vec, G->dx, T.coef); 
         double prob = gauss_probability(G->dim, current_state_vec, M);
-        *P = insert_recursive(*P, G, T, prob, key, current_state, BOUNDS, BOUND_F);
+        *P = insert_recursive(*P, G, T, prob, key, current_state, BOUNDS, BOUND_f);
         return;
     }
 
@@ -608,16 +613,16 @@ void recursive_loop(TreeNode** P, Grid* G, Meas M, Traj T, int level, int* curre
     int end = (int) round(3 * pow(M.cov[level][level], 0.5) / G->dx[level]);
     for (int i = start; i <= end; i++) {
         current_state[level] = i;
-        current_state_vec[level] = i * G->dx[level];
-        recursive_loop(P, G, M, T, level + 1, current_state, current_state_vec, BOUNDS, BOUND_F);
+        current_state_vec[level] = i * G->dx[level] + G->center[level];
+        recursive_loop(h, P, G, M, T, level + 1, current_state, current_state_vec, BOUNDS, BOUND_f);
     }
 }
 
-void initialize_grid(void (*ADV_F)(double*, double*, double*), TreeNode** P, Grid* G, Meas M, Traj T, bool BOUNDS, double (*BOUND_F)(double*, double*)){
+void initialize_grid(void (*f)(double*, double*, double*), void (*h)(double*, double*, double*), TreeNode** P, Grid* G, Meas M, Traj T, bool BOUNDS, double (*BOUND_f)(double*, double*)){
     int current_state[G->dim]; double current_state_vec[G->dim];
-    recursive_loop(P, G, M, T, 0, current_state, current_state_vec, BOUNDS, BOUND_F);
+    recursive_loop(h, P, G, M, T, 0, current_state, current_state_vec, BOUNDS, BOUND_f);
     *P = balance(*P); 
-    initialize_adv(ADV_F, *P, G, T);
+    initialize_adv(f, *P, G, T);
     initialize_ik_nodes(*P, *P, G);
 }
 
@@ -743,12 +748,12 @@ void record_data(TreeNode* r, const char* FILE_NAME, Grid G, const double t){
     fclose(file);
 }
 
-void create_neighbors(TreeNode** P, TreeNode* r, Grid G, Traj T, bool BOUNDS, double (*BOUND_F)(double*, double*)){
+void create_neighbors(TreeNode** P, TreeNode* r, Grid G, Traj T, bool BOUNDS, double (*BOUND_f)(double*, double*)){
     if (r == NULL){
         return;
     }
-    create_neighbors(P, r->left, G, T, BOUNDS, BOUND_F);
-    create_neighbors(P, r->right, G, T, BOUNDS, BOUND_F);
+    create_neighbors(P, r->left, G, T, BOUNDS, BOUND_f);
+    create_neighbors(P, r->right, G, T, BOUNDS, BOUND_f);
     
     if (r->prob >= G.thresh){
         double current_v[G.dim];
@@ -763,7 +768,7 @@ void create_neighbors(TreeNode** P, TreeNode* r, Grid G, Traj T, bool BOUNDS, do
                 if(r->k_nodes[i] == NULL){
                     new_state[i] += 1;
                     new_key = state_conversion(G.dim, new_state);
-                    *P = insert_recursive(*P, &G, T, 0, new_key, new_state, BOUNDS, BOUND_F);
+                    *P = insert_recursive(*P, &G, T, 0, new_key, new_state, BOUNDS, BOUND_f);
 
                     // Checking Edges
                     for (int j = 0; j < G.dim; j++){
@@ -773,12 +778,12 @@ void create_neighbors(TreeNode** P, TreeNode* r, Grid G, Traj T, bool BOUNDS, do
                             if(current_v[j] > 0){
                                 new_state[j] += 1;
                                 new_key = state_conversion(G.dim, new_state);
-                                *P = insert_recursive(*P, &G, T, 0, new_key, new_state, BOUNDS, BOUND_F);
+                                *P = insert_recursive(*P, &G, T, 0, new_key, new_state, BOUNDS, BOUND_f);
 
                             }else if (current_v[j] < 0){
                                 new_state[j] -= 1;
                                 new_key = state_conversion(G.dim, new_state);
-                                *P = insert_recursive(*P, &G, T, 0, new_key, new_state, BOUNDS, BOUND_F);
+                                *P = insert_recursive(*P, &G, T, 0, new_key, new_state, BOUNDS, BOUND_f);
 
                             }
                         }
@@ -793,14 +798,14 @@ void create_neighbors(TreeNode** P, TreeNode* r, Grid G, Traj T, bool BOUNDS, do
                                 if(r->k_nodes[i]->k_nodes[j] == NULL){
                                     new_state[j] += 1;
                                     new_key = state_conversion(G.dim, new_state);
-                                    *P = insert_recursive(*P, &G, T, 0, new_key, new_state, BOUNDS, BOUND_F);
+                                    *P = insert_recursive(*P, &G, T, 0, new_key, new_state, BOUNDS, BOUND_f);
 
                                 }
                             }else if (current_v[j] < 0){
                                 if(r->k_nodes[i]->i_nodes[j] == NULL){
                                     new_state[j] -= 1;
                                     new_key = state_conversion(G.dim, new_state);
-                                    *P = insert_recursive(*P, &G, T, 0, new_key, new_state, BOUNDS, BOUND_F);
+                                    *P = insert_recursive(*P, &G, T, 0, new_key, new_state, BOUNDS, BOUND_f);
 
                                 }
                             }
@@ -812,7 +817,7 @@ void create_neighbors(TreeNode** P, TreeNode* r, Grid G, Traj T, bool BOUNDS, do
                 if(r->i_nodes[i] == NULL){
                     new_state[i] -= 1;
                     new_key = state_conversion(G.dim, new_state);
-                    *P = insert_recursive(*P, &G, T, 0, new_key, new_state, BOUNDS, BOUND_F);
+                    *P = insert_recursive(*P, &G, T, 0, new_key, new_state, BOUNDS, BOUND_f);
 
                     // Checking Edges
                     for (int j = 0; j < G.dim; j++){
@@ -822,12 +827,12 @@ void create_neighbors(TreeNode** P, TreeNode* r, Grid G, Traj T, bool BOUNDS, do
                             if(current_v[j] > 0){
                                 new_state[j] += 1;
                                 new_key = state_conversion(G.dim, new_state);
-                                *P = insert_recursive(*P, &G, T, 0, new_key, new_state, BOUNDS, BOUND_F); 
+                                *P = insert_recursive(*P, &G, T, 0, new_key, new_state, BOUNDS, BOUND_f); 
 
                             }else if (current_v[j] < 0){
                                 new_state[j] -= 1;
                                 new_key = state_conversion(G.dim, new_state);
-                                *P = insert_recursive(*P, &G, T, 0, new_key, new_state, BOUNDS, BOUND_F);
+                                *P = insert_recursive(*P, &G, T, 0, new_key, new_state, BOUNDS, BOUND_f);
 
                             }
                         }
@@ -842,14 +847,14 @@ void create_neighbors(TreeNode** P, TreeNode* r, Grid G, Traj T, bool BOUNDS, do
                                 if(r->i_nodes[i]->k_nodes[j] == NULL){
                                     new_state[j] += 1;
                                     new_key = state_conversion(G.dim, new_state);
-                                    *P = insert_recursive(*P, &G, T, 0, new_key, new_state, BOUNDS, BOUND_F);
+                                    *P = insert_recursive(*P, &G, T, 0, new_key, new_state, BOUNDS, BOUND_f);
 
                                 }
                             }else if (current_v[j] < 0){
                                 if(r->i_nodes[i]->i_nodes[j] == NULL){
                                     new_state[j] -= 1;
                                     new_key = state_conversion(G.dim, new_state); 
-                                    *P = insert_recursive(*P, &G, T, 0, new_key, new_state, BOUNDS, BOUND_F);
+                                    *P = insert_recursive(*P, &G, T, 0, new_key, new_state, BOUNDS, BOUND_f);
 
                                 }
                             }
@@ -861,10 +866,10 @@ void create_neighbors(TreeNode** P, TreeNode* r, Grid G, Traj T, bool BOUNDS, do
     }
 }
 
-void grow_tree(void (*ADV_F)(double*, double*, double*), TreeNode** P, Grid G, Traj T, bool BOUNDS, double (*BOUND_F)(double*, double*)){
-    create_neighbors(P, *P, G, T, BOUNDS, BOUND_F);
+void grow_tree(void (*f)(double*, double*, double*), TreeNode** P, Grid G, Traj T, bool BOUNDS, double (*BOUND_f)(double*, double*)){
+    create_neighbors(P, *P, G, T, BOUNDS, BOUND_f);
     *P = balance(*P); 
-    initialize_adv(ADV_F, *P, &G, T);
+    initialize_adv(f, *P, &G, T);
     initialize_ik_nodes(*P, *P, &G);
 }
 
@@ -1079,24 +1084,26 @@ void prune_tree(TreeNode** P, Grid G){
     initialize_ik_nodes(*P, *P, &G);
 }
 
-void measurement_update_recursive(TreeNode* r, Grid G, Meas M){
+void measurement_update_recursive(void (*h)(double*, double*, double*), TreeNode* r, Grid G, Meas M, Traj T){
     if (r == NULL){
         return;
     }
 
-    measurement_update_recursive(r->left, G, M);
-    measurement_update_recursive(r->right, G, M);
+    measurement_update_recursive(h, r->left, G, M, T);
+    measurement_update_recursive(h, r->right, G, M, T);
 
-    double current_state_vec[G.dim];
+    double x[G.dim];
     for(int i = 0; i < G.dim; i++){
-        current_state_vec[i] = r->state[i]*G.dx[i] - M.mean[i];
+        x[i] = G.dx[i]*r->state[i]+G.center[i];
     }
-    double x = gauss_probability(G.dim, current_state_vec, M);
 
-    r->prob *= exp(-x/2);
+    (*h)(x, G.dx, T.coef); 
+
+    double prob = gauss_probability(G.dim, x, M);   
+    r->prob *= prob;
 }
 
-void run_gbees(void (*ADV_F)(double*, double*, double*), double (*BOUND_F)(double*, double*), Grid G, Meas M, Traj T, char* P_DIR, char* M_DIR, int NUM_DIST, int NUM_MEAS, int DEL_STEP, int OUTPUT_FREQ, int DIM, bool OUTPUT, bool RECORD, bool MEASURE, bool BOUNDS){
+void run_gbees(void (*f)(double*, double*, double*), void (*h)(double*, double*, double*), double (*BOUND_f)(double*, double*), Grid G, Meas M, Traj T, char* P_DIR, char* M_DIR, int NUM_DIST, int NUM_MEAS, int DEL_STEP, int OUTPUT_FREQ, int DIM, bool OUTPUT, bool RECORD, bool MEASURE, bool BOUNDS){
     char* P_PATH;
     double RECORD_TIME = M.T/(NUM_DIST-1);      
 
@@ -1104,7 +1111,7 @@ void run_gbees(void (*ADV_F)(double*, double*, double*), double (*BOUND_F)(doubl
 
     printf("Initializing distribution...\n\n");
 
-    initialize_grid(ADV_F, &P, &G, M, T, BOUNDS, BOUND_F); 
+    initialize_grid(f, h, &P, &G, M, T, BOUNDS, BOUND_f); 
     if(BOUNDS){G.lo_bound = DBL_MAX; G.hi_bound = -DBL_MAX; set_bounds(P, &G);} 
     normalize_tree(P); 
 
@@ -1115,7 +1122,7 @@ void run_gbees(void (*ADV_F)(double*, double*, double*), double (*BOUND_F)(doubl
     for(int nm = 0; nm < NUM_MEAS; nm++){
         max_key = 0; a_count = 0; tot_count = 0; 
         get_tree_info(P, &G, &max_key, &a_count, &tot_count); 
-        printf("Timestep: %d-0, Program time: %f s, Sim. time: 0", nm, ((double)(clock()-start))/CLOCKS_PER_SEC); 
+        printf("Timestep: %d-0, Program time: %f s, Sim. time: %f", nm, ((double)(clock()-start))/CLOCKS_PER_SEC, tt); 
         printf(" TU, Active/Total Cells: %d/%d, Max key %%: %e\n", a_count, tot_count, (double)(max_key)/(pow(2,64)-1)*100); 
         if(RECORD){P_PATH = concat_p(P_DIR, "/P", nm, "/pdf_", 0); record_data(P, P_PATH, G, tt); free(P_PATH);};
 
@@ -1125,7 +1132,7 @@ void run_gbees(void (*ADV_F)(double*, double*, double*), double (*BOUND_F)(doubl
             rt = 0;
             while (rt < RECORD_TIME) { // time between PDF recordings
 
-                grow_tree(ADV_F, &P, G, T, BOUNDS, BOUND_F);
+                grow_tree(f, &P, G, T, BOUNDS, BOUND_f);
                 check_cfl_condition(P, &G); 
                 G.dt = fmin(G.dt, RECORD_TIME - rt);
                 rt += G.dt;
@@ -1156,7 +1163,6 @@ void run_gbees(void (*ADV_F)(double*, double*, double*), double (*BOUND_F)(doubl
             }
             
             if (RECORD) { // record PDF
-                // printf("\nRECORDING PDF AT: %f TU...\n\n", tt + mt + rt);
                 P_PATH = concat_p(P_DIR, "/P", nm, "/pdf_", record_count); 
                 record_data(P, P_PATH, G, tt + mt + rt);
                 record_count += 1;
@@ -1169,26 +1175,26 @@ void run_gbees(void (*ADV_F)(double*, double*, double*), double (*BOUND_F)(doubl
         tt += mt;
         if ((MEASURE) && (nm < NUM_MEAS - 1)) { // peform discrete measurement update
 
-            printf("\nPERFORMING BAYESIAN UPDATE AT: %f TU..\n\n.", tt);
+            printf("\nPERFORMING BAYESIAN UPDATE AT: %f TU...\n\n", tt);
 
             // freeing previous measurement 
             Meas_free(&M, G.dim);                                                    
 
             // reading new measurement
-            char* M_FILE_NAME = "/measurement";                                             
+            char* M_FILE_NAME = "measurement";                                             
             char* M_FILE_EXT = ".txt"; 
-            int length = snprintf(NULL, 0, ".%s%d%s", M_FILE_NAME, nm+1, M_FILE_EXT) + 1;
+            int length = snprintf(NULL, 0, "%s%d%s", M_FILE_NAME, nm+1, M_FILE_EXT) + 1;
             char* M_FILE = (char *)malloc(length);
             if (M_FILE == NULL) {
                 fprintf(stderr, "Error: memory allocation failure during discrete measurement update\n");
                 exit(EXIT_FAILURE);
             }
-            snprintf(M_FILE, length, ".%s%d%s", M_FILE_NAME, nm+1, M_FILE_EXT);
-            Meas M = Meas_create(DIM, M_DIR, M_FILE);                                       
+            snprintf(M_FILE, length, "%s%d%s", M_FILE_NAME, nm+1, M_FILE_EXT);
+            M = Meas_create(DIM, M_DIR, M_FILE);                                       
             free(M_FILE); 
 
             // performing discrete update
-            measurement_update_recursive(P, G, M);                                     
+            measurement_update_recursive(h, P, G, M, T);                                     
             normalize_tree(P);
             prune_tree(&P, G);
         }
