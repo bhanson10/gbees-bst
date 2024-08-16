@@ -5,6 +5,7 @@ TOL = 1E-8
 
 class Meas(ct.Structure):
     _fields_ = [
+        ("dim", ct.POINTER(ct.c_int)),
         ("mean", ct.POINTER(ct.c_double)),
         ("cov", ct.POINTER(ct.POINTER(ct.c_double))),
         ("T", ct.c_double)
@@ -69,7 +70,7 @@ TreeNode._fields_ = [
     ("right", ct.POINTER(TreeNode))
 ]
 
-def run_gbees(f, h, BOUND_f, G, M, T, P_DIR, M_DIR, NUM_DIST, NUM_MEAS, DEL_STEP, OUTPUT_FREQ, DIM, OUTPUT, RECORD, MEASURE, BOUNDS):
+def run_gbees(f, h, BOUND_f, G, M, T, P_DIR, M_DIR, NUM_DIST, NUM_MEAS, DEL_STEP, OUTPUT_FREQ, OUTPUT, RECORD, MEASURE, BOUNDS):
 
     c_P_DIR = P_DIR.encode('utf-8')
     c_P_DIR = ct.create_string_buffer(c_P_DIR)
@@ -79,20 +80,20 @@ def run_gbees(f, h, BOUND_f, G, M, T, P_DIR, M_DIR, NUM_DIST, NUM_MEAS, DEL_STEP
     c_M_DIR = ct.create_string_buffer(c_M_DIR)
     c_M_DIR = ct.cast(c_M_DIR, ct.POINTER(ct.c_char))
 
-    SYS_CALLBACK_FUNC = ct.CFUNCTYPE(None, ct.POINTER(ct.c_double), ct.POINTER(ct.c_double), ct.POINTER(ct.c_double))
+    SYS_CALLBACK_FUNC = ct.CFUNCTYPE(None, ct.POINTER(ct.c_double), ct.POINTER(ct.c_double), ct.POINTER(ct.c_double), ct.POINTER(ct.c_double))
     BOUND_CALLBACK_FUNC = ct.CFUNCTYPE(ct.c_double, ct.POINTER(ct.c_double), ct.POINTER(ct.c_double))
 
     @SYS_CALLBACK_FUNC
-    def c_f(x, dx, coef):
+    def c_f(xk, x, dx, coef):
         v = f(x, dx, coef)
-        for i in range(DIM):
-            x[i] = v[i]
+        for i in range(len(v)):
+            xk[i] = v[i]
 
     @SYS_CALLBACK_FUNC
-    def c_h(x, dx, coef):
+    def c_h(y, x, dx, coef):
         v = h(x, dx, coef)
-        for i in range(DIM):
-            x[i] = v[i]
+        for i in range(len(v)):
+            y[i] = v[i]
     
     if(BOUNDS):
         @BOUND_CALLBACK_FUNC
@@ -100,11 +101,11 @@ def run_gbees(f, h, BOUND_f, G, M, T, P_DIR, M_DIR, NUM_DIST, NUM_MEAS, DEL_STEP
             J = BOUND_f(x, coef)
             return J
         
-        lib.run_gbees.argtypes = [SYS_CALLBACK_FUNC, SYS_CALLBACK_FUNC, BOUND_CALLBACK_FUNC, Grid, Meas, Traj, ct.c_char_p, ct.c_char_p, ct.c_int, ct.c_int, ct.c_int, ct.c_int, ct.c_int, ct.c_bool, ct.c_bool, ct.c_bool, ct.c_bool]
+        lib.run_gbees.argtypes = [SYS_CALLBACK_FUNC, SYS_CALLBACK_FUNC, BOUND_CALLBACK_FUNC, Grid, Meas, Traj, ct.c_char_p, ct.c_char_p, ct.c_int, ct.c_int, ct.c_int, ct.c_int, ct.c_bool, ct.c_bool, ct.c_bool, ct.c_bool]
         lib.run_gbees.restype = None
     else:
         c_BOUND_f = None
-        lib.run_gbees.argtypes = [SYS_CALLBACK_FUNC, SYS_CALLBACK_FUNC, ct.c_char_p, Grid, Meas, Traj, ct.c_char_p, ct.c_char_p, ct.c_int, ct.c_int, ct.c_int, ct.c_int, ct.c_int, ct.c_bool, ct.c_bool, ct.c_bool, ct.c_bool]
+        lib.run_gbees.argtypes = [SYS_CALLBACK_FUNC, SYS_CALLBACK_FUNC, ct.c_char_p, Grid, Meas, Traj, ct.c_char_p, ct.c_char_p, ct.c_int, ct.c_int, ct.c_int, ct.c_int, ct.c_bool, ct.c_bool, ct.c_bool, ct.c_bool]
         lib.run_gbees.restype = None
 
-    lib.run_gbees(c_f, c_h, c_BOUND_f, G, M, T, c_P_DIR, c_M_DIR, ct.c_int(NUM_DIST), ct.c_int(NUM_MEAS), ct.c_int(DEL_STEP), ct.c_int(OUTPUT_FREQ), ct.c_int(DIM), ct.c_bool(OUTPUT), ct.c_bool(RECORD), ct.c_bool(MEASURE), ct.c_bool(BOUNDS))
+    lib.run_gbees(c_f, c_h, c_BOUND_f, G, M, T, c_P_DIR, c_M_DIR, ct.c_int(NUM_DIST), ct.c_int(NUM_MEAS), ct.c_int(DEL_STEP), ct.c_int(OUTPUT_FREQ), ct.c_bool(OUTPUT), ct.c_bool(RECORD), ct.c_bool(MEASURE), ct.c_bool(BOUNDS))
