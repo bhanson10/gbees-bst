@@ -20,7 +20,7 @@ def identity(x, dx, coef):
     return [v1, v2, v3]
 
 #==================================== Read in initial discrete measurement ==================================#
-print("\nReading in initial discrete measurement...\n\n")
+print("Reading in initial discrete measurement...\n")
 
 P_DIR = "<path_to_pdf>"      # Saved PDFs path
 M_DIR = "./measurements"     # Measurement path
@@ -29,7 +29,7 @@ M = gbees.Meas_create(DIM_h, M_DIR, M_FILE)
 #============================================================================================================#
 
 #=========================================== Read in user inputs ============================================#
-print("Reading in user inputs...\n\n")
+print("Reading in user inputs...\n")
 
 dx = [None] * DIM_f                             # Grid width, default is half of the std. dev. from the initial measurement 
 for i in range(DIM_h):
@@ -39,10 +39,10 @@ G = gbees.Grid_create(DIM_f, 2E-5, M.mean, dx); # Inputs: (dimension, probabilit
 coef = [4.0, 1.0, 48.0]                       # Lorenz3D trajectory attributes (sigma, beta, r)
 T = gbees.Traj_create(len(coef), coef);       # Inputs: (# of coefficients, coefficients)
 
-OUTPUT_FREQ = 20;                             # Number of steps per output to terminal
-DEL_STEP = 20;                                # Number of steps per deletion procedure
 NUM_DIST = 5;                                 # Number of distributions recorded per measurement
 NUM_MEAS = 2;                                 # Number of measurements
+DEL_STEP = 20;                                # Number of steps per deletion procedure
+OUTPUT_FREQ = 20;                             # Number of steps per output to terminal
 OUTPUT = True;                                # Write info to terminal
 RECORD = True;                                # Write PDFs to .txt file
 MEASURE = True;                               # Take discrete measurement updates

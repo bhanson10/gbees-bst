@@ -19,7 +19,7 @@ void identity(double* h, double* x, double* dx, double* coef){
 
 int main(){
     //=================================== Read in initial discrete measurement =================================//
-    printf("\nReading in initial discrete measurement...\n\n");
+    printf("Reading in initial discrete measurement...\n\n");
 
     char* P_DIR = "<path_to_pdf>";     // Saved PDFs path
     char* M_DIR = "./measurements";    // Measurement path
@@ -39,10 +39,10 @@ int main(){
     double coef[] = {4.0, 1.0, 48.0};                         // Lorenz3D trajectory attributes (sigma, beta, r)
     Traj T = Traj_create(3, coef); // Inputs: (# of coefficients, coefficients)
 
-    int OUTPUT_FREQ = 20;                                     // Number of steps per output to terminal
-    int DEL_STEP = 20;                                        // Number of steps per deletion procedure
     int NUM_DIST = 5;                                         // Number of distributions recorded per measurement
     int NUM_MEAS = 2;                                         // Number of measurements
+    int DEL_STEP = 20;                                        // Number of steps per deletion procedure
+    int OUTPUT_FREQ = 20;                                     // Number of steps per output to terminal
     bool OUTPUT = true;                                       // Write info to terminal
     bool RECORD = true;                                       // Write PDFs to .txt file
     bool MEASURE = true;                                      // Take discrete measurement updates
