@@ -4,13 +4,13 @@ clear all; close all; clc;
 % Benjamin Hanson, 2024
 
 %% initializing system properties
-prop.mu = 2.528017528540000E-5; prop.LU = 668519; prop.TU = 48562; prop.sec_r =  1560.8;  
+prop.mu = 1.901109735892602e-07; prop.LU = 238529; prop.TU = 18913; prop.sec_r = 2.521000000000000e+02;
 prop.U = [prop.LU, prop.LU, prop.LU/prop.TU, prop.LU/prop.TU]; 
-prop.T = 2.1988449635636802E+0;
-ic = [1.0169962521469986; -1.0697953862098174E-20; -1.3935178510137174E-14; 1.2575912545456968E-2];
+ic.T = 3.727168019157753;
+ic.state = [1.001471995170839 -0.000017518099335 0.000071987832396 0.013633926328993];
 
 %% initializing figure
-f1 = figure(1); clf; hold all; f1.Position = [50 100 1400 700];
+f1 = figure(1); clf; hold all; f1.Position = [250 100 1000 700];
 tiledlayout(1, 2, 'TileSpacing','compact');
 
 nexttile(1); hold all; 
@@ -29,56 +29,45 @@ ylabel("$v_y$ (km/s)", "Interpreter","latex")
  
 %% truth
 options = odeset('MaxStep', 1E-3, 'InitialStep', 1E-3, 'RelTol', 1e-6);
-[t, x] = ode87(@(t, x) PCR3BP(t, x, prop), [0,prop.T], ic, options);
+[t, x] = ode87(@(t, x) PCR3BP(t, x, prop), [0,ic.T], ic.state, options);
 x(:,1:4) = x(:,1:4).*prop.U; 
 t = t.*prop.TU; 
 
 %% nominal trajectory
 nexttile(1); 
-plot(x((t <= 12*3600),1),x((t <= 12*3600),2),'r-','LineWidth',2,'HandleVisibility','off');
-plot(x(:,1),x(:,2),'r--','LineWidth',1,'HandleVisibility','off');
+plot(x(:,1),x(:,2),'k-','LineWidth',1,'HandleVisibility','off');
 drawnow;
 nexttile(2); 
-plot(x((t <= 12*3600),3),x((t <= 12*3600),4),'r-','LineWidth',2,'HandleVisibility','off');
-plot(x(:,3),x(:,4),'r--','LineWidth', 1,'HandleVisibility','off');
+plot(x(:,3),x(:,4),'k-','LineWidth', 1,'HandleVisibility','off');
 drawnow;
 
-%% monte carlo
-n = 5000; 
-P = diag([2.237500000000000E-8, 2.237500000000000E-8, 5.276700000000000E-7, 5.276700000000000E-7]);
-x0_mc = mvnrnd(ic,P,n);
-xf_mc = []; 
-tspan = [0,12*3600/prop.TU]; 
-for i=1:n
-    [t, x] = ode87(@(t, x) PCR3BP(t, x, prop), tspan, x0_mc(i,:), options);
-    xf_mc(i,:) = x(end,:); 
-end
-x0_mc(:,1:4) = x0_mc(:,1:4).*prop.U;
-xf_mc(:,1:4) = xf_mc(:,1:4).*prop.U;
-
-nexttile(1);
-scatter(x0_mc(:,1), x0_mc(:,2), 20, 'k', 'filled', 'MarkerEdgeColor', 'none', 'MarkerFaceAlpha', 0.1);
-scatter(xf_mc(:,1), xf_mc(:,2), 20, 'k', 'filled', 'MarkerEdgeColor', 'none', 'MarkerFaceAlpha', 0.1);
-drawnow; 
-
-nexttile(2);
-scatter(x0_mc(:,3), x0_mc(:,4), 20, 'k', 'filled', 'MarkerEdgeColor', 'none', 'MarkerFaceAlpha', 0.1);
-scatter(xf_mc(:,3), xf_mc(:,4), 20, 'k', 'filled', 'MarkerEdgeColor', 'none', 'MarkerFaceAlpha', 0.1);
-drawnow; 
-
 %% GBEES
-NM = 1; 
-p.color = 'b'; p.alpha = [0.2, 0.4, 0.6]; 
-P_DIR = "<path_to_pdf>";
+NM = 4; 
+
+C = [238, 102, 119;  % Red
+     68,  119, 170;  % Blue
+     255, 140, 0;    % Orange
+     34,  139, 34;]; % Green
+
+C  = C/255;
+
+p.alpha = [0.3, 0.4, 0.7]; 
+P_DIR = "./results/c";
 
 count = 1;
 for nm=0:NM-1
-
+    p.color = C(nm + 1, :);
     P_DIR_SUB = P_DIR + "/P" + num2str(nm); 
     FILE_LIST = dir(fullfile(P_DIR_SUB, '*.txt'));  % List only .txt files
     num_files = numel(FILE_LIST);
     
-    for i=[0,num_files-1]
+    if mod(nm, 2) == 0 % alternate between blue and red isocurves
+        set = [0, 2, num_files-1];
+    else
+        set = [0, 5, num_files-1];
+    end
+
+    for i=set
         P_FILE = P_DIR_SUB + "/pdf_" + num2str(i) + ".txt";
 
         [x_gbees, P_gbees, n_gbees, t_gbees(count)] = parse_nongaussian_txt(P_FILE, prop);
@@ -95,57 +84,34 @@ for nm=0:NM-1
         drawnow; 
         
         count = count + 1;
-        p.display = 0; 
     end
 end
-nexttile(1);
-ylim([-8000,8000]);
 
-% %% GBEES - Monte
-% NM = 1; 
-% clear p; p.color = 'g'; p.alpha = [0.2, 0.4, 0.6];
-% P_DIR = "./results/monte/P"; 
-% 
-% count = 1;
-% for nm=0:NM-1
-% 
-%     P_DIR_SUB = P_DIR + num2str(nm); 
-%     FILE_LIST = dir(fullfile(P_DIR_SUB, '*.txt'));  % List only .txt files
-%     num_files = numel(FILE_LIST);
-% 
-%     for i=[0,num_files-1]
-%         P_FILE = P_DIR_SUB + "/pdf_" + num2str(i) + ".txt";
-% 
-%         [x_gbees, P_gbees, n_gbees, t_gbees(count)] = parse_nongaussian_txt(P_FILE, prop);
-% 
-%         xest_gbees{count} = zeros(size(x_gbees(1,:)));
-%         for j=1:n_gbees
-%             xest_gbees{count} = xest_gbees{count}+x_gbees(j,:).*P_gbees(j);
-%         end
-% 
-%         nexttile(1); 
-%         plot_nongaussian_surface(x_gbees(:,1:2),P_gbees,[normpdf(1)/normpdf(0), normpdf(2)/normpdf(0), normpdf(3)/normpdf(0)],p);
-%         nexttile(2); 
-%         plot_nongaussian_surface(x_gbees(:,3:4),P_gbees,[normpdf(1)/normpdf(0), normpdf(2)/normpdf(0), normpdf(3)/normpdf(0)], p);
-%         drawnow; 
-% 
-%         count = count + 1;
-%         p.display = 0;
-%     end
-% end
-% 
-% nexttile(1);
-% ylim([-8000,8000]);
-% 
-% clear L; clear LH; 
-% LH(1) = fill(nan, nan, nan, 'FaceAlpha', 0.5, 'FaceColor', 'b', 'EdgeColor', 'none');
-% L{1} = "{ }Analytical{           }";
-% LH(2) = fill(nan, nan, nan, 'FaceAlpha', 0.5, 'FaceColor', 'g', 'EdgeColor', 'none');
-% L{2} = "{ }Monte{  }";
-% leg = legend(LH, L, 'Orientation', 'Horizontal', 'FontSize', 18, 'FontName', 'times');
-% leg.Layout.Tile = 'south';
-% drawnow; 
-% 
+P_FILE = P_DIR + "/P0/pdf_0.txt";
+p.color = C(1, :);
+[x_gbees, P_gbees, n_gbees, t_gbees(count)] = parse_nongaussian_txt(P_FILE, prop);
+nexttile(1); 
+plot_nongaussian_surface(x_gbees(:,1:2),P_gbees,[normpdf(1)/normpdf(0), normpdf(2)/normpdf(0), normpdf(3)/normpdf(0)],p);
+nexttile(2); 
+plot_nongaussian_surface(x_gbees(:,3:4),P_gbees,[normpdf(1)/normpdf(0), normpdf(2)/normpdf(0), normpdf(3)/normpdf(0)], p);
+drawnow; 
+
+clear L; clear LH; 
+LH(1) = plot(NaN,NaN,'o','MarkerSize', 10, 'MarkerFaceColor',[1,167/255,254/255],'MarkerEdgeColor','none');
+L{1} = "Enceladus\,\,\,";
+LH(2) = plot(NaN,NaN,'k-', 'LineWidth',1);
+L{2} = "Nominal\,\,\,";
+LH(3) = fill(nan, nan, nan, 'FaceAlpha', 0.7, 'FaceColor', C(1,:), 'EdgeColor', 'none');
+L{3} = "$p_x(x'|y_0)\,\,\,$";
+LH(4) = fill(nan, nan, nan, 'FaceAlpha', 0.7, 'FaceColor', C(2,:), 'EdgeColor', 'none');
+L{4} = "$p_x(x'|y_1)\,\,\,$";
+LH(5) = fill(nan, nan, nan, 'FaceAlpha', 0.7, 'FaceColor', C(3,:), 'EdgeColor', 'none');
+L{5} = "$p_x(x'|y_2)\,\,\,$";
+LH(6) = fill(nan, nan, nan, 'FaceAlpha', 0.7, 'FaceColor', C(4,:)', 'EdgeColor', 'none');
+L{6} = "$p_x(x'|y_3)\,\,\,$";
+leg = legend(LH, L, 'Orientation', 'Horizontal', 'FontSize', 18, 'FontName', 'times', 'Interpreter', 'latex');
+leg.Layout.Tile = 'south';
+drawnow; 
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %                                FUNCTIONS
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
