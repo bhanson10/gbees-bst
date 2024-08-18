@@ -31,7 +31,7 @@ double PCR3BP_J(double* x, double* coef){
 
 int main(){
     //=================================== Read in initial discrete measurement =================================//
-    printf("\nReading in initial discrete measurement...\n\n");
+    printf("Reading in initial discrete measurement...\n\n");
 
     char* P_DIR = "<path_to_pdf>";       // Saved PDFs path
     char* M_DIR = "./measurements";    // Measurement path
