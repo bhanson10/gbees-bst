@@ -27,7 +27,7 @@ plot3(x(:,1),x(:,2),x(:,3),'k-','linewidth',2,'DisplayName','Nominal'); drawnow;
 %% GBEES
 NM = 2; 
 p.color = "cyan"; p.alpha = [0.3, 0.5, 0.7]; 
-P_DIR = "./results/c";
+P_DIR = "<path_to_pdf>";
 
 count = 1;
 for nm=0:NM-1
@@ -59,9 +59,9 @@ end
 
 clear L; clear LH; 
 LH(1) = fill(nan, nan, nan, 'FaceAlpha', 0.7, 'FaceColor', 'cyan', 'EdgeColor', 'none');
-L{1} = "{ } $M_0${   }";
+L{1} = "$p_\mathbf{x}(\mathbf{x}'|\mathbf{y}_0)\,\,\,$";
 LH(2) = fill(nan, nan, nan, 'FaceAlpha', 0.7, 'FaceColor', 'magenta', 'EdgeColor', 'none');
-L{2} = "{ } $M_1$";
+L{2} = "$p_\mathbf{x}(\mathbf{x}'|\mathbf{y}_1)\,\,\,$";
 leg = legend(LH, L, 'Orientation', 'Horizontal', 'FontSize', 18, 'FontName', 'times', 'Interpreter', 'latex');
 leg.Layout.Tile = 'south';
 drawnow; 
