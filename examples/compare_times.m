@@ -4,7 +4,7 @@ mkrs = {"-o", "-square", "->", "-pentagram"};
 MDL = "<model_type>";
 DIR = {"c", "python"}; 
 TU = 1; 
-names = {'c','python -- analytical'};
+names = {'c','python'};
 time_unit = '(TU)';
 
 f = {}; 
