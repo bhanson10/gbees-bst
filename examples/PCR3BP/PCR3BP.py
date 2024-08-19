@@ -47,11 +47,10 @@ for i in range(DIM_h):
     dx[i] = (M.cov[i][i]**(0.5))/2
 G = gbees.Grid_create(DIM_h, 1E-7, M.mean, dx); # Inputs: (dimension, probability threshold, center, grid width)    
  
-# coef = [2.528017528540000E-5]                 # PCR3BP trajectory attributes (mu)
-coef = [1.901109735892602E-07]                 # PCR3BP trajectory attributes (mu)
+coef = [1.901109735892602E-07]                # PCR3BP trajectory attributes (mu)
 T = gbees.Traj_create(len(coef), coef);       # Inputs: (# of coefficients, coefficients)
 
-NUM_DIST = 8;                                # Number of distributions recorded per measurement
+NUM_DIST = 8;                                 # Number of distributions recorded per measurement
 NUM_MEAS = 4;                                 # Number of measurements
 DEL_STEP = 20;                                # Number of steps per deletion procedure
 OUTPUT_FREQ = 20;                             # Number of steps per output to terminal
