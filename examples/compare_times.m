@@ -4,7 +4,7 @@ mkrs = {"-o", "-square", "->", "-pentagram"};
 MDL = "<model_type>";
 DIR = {"c", "python"}; 
 TU = 1; 
-names = {'c implementation','python wrapper'};
+names = {'c','python -- analytical'};
 time_unit = '(TU)';
 
 f = {}; 
@@ -17,8 +17,7 @@ end
 f1 = figure(1); clf; f1.Position = [100 350 1300 475];
 tiles = tiledlayout(1,2);
 
-nexttile; ax = gca; 
-l = legend; l.Location = "Northwest"; l.FontSize = 14; l.FontName = "Times"; 
+nexttile(1); ax = gca; 
 set(ax, 'FontName' , 'Times','FontSize',14);
 xlabel("Simulation time " + time_unit, 'FontSize', 18, 'FontName', 'Times');
 yyaxis left; hold on; 
@@ -38,7 +37,15 @@ end
 ylabel("Number of cells", 'FontSize', 18, 'FontName', 'Times');
 xlim([0, sti(end).*TU]); 
 
-nexttile; ax = gca; 
+for i = 1:length(f)
+    LH1(i) = plot(NaN, NaN, mkrs{i}, 'Color', 'k', 'LineWidth', 1, 'MarkerSize', 10);
+    L1{i} = names{i};
+end
+leg1 = legend(LH1, L1, 'Location', 'North', 'Orientation', 'Horizontal', 'FontSize', 14, 'FontName', 'times', 'Interpreter', 'latex');
+leg1.Layout.Tile = "south";
+drawnow; 
+
+nexttile(2); ax = gca; 
 set(ax, 'FontName' , 'Times','FontSize',14);
 xlabel("Simulation time " + time_unit, 'FontSize', 18, 'FontName', 'Times');
 
@@ -59,12 +66,7 @@ yyaxis right; hold on;
 s1 = s{1}; 
 for i=2:length(f)
     si_norm = si./s1; 
-    if size(names)~=0
-        si = s{i}; name = names{i};  
-        plot(st1(2:end).*TU, si_norm(2:end), mkrs{i}, 'Color', 'red', 'LineWidth', 1, 'MarkerSize', 10, 'DisplayName', append(name, ' / ', name1));
-    else
-        plot(st1(2:end).*TU, si_norm(2:end), mkrs{i}, 'Color', 'red', 'LineWidth', 1, 'MarkerSize', 10, 'HandleVisibility', 'off');
-    end
+    plot(st1(2:end).*TU, si_norm(2:end), mkrs{i}, 'Color', 'red', 'LineWidth', 1, 'MarkerSize', 10, 'HandleVisibility', 'off');
 end
 ylabel("Normalized cell number", 'FontSize', 18, 'FontName', 'Times');
 xlim([0, st1(end).*TU]); 
