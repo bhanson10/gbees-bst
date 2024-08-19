@@ -34,7 +34,7 @@ for i=1:length(f)
     sti = st{i}; si = s{i}; 
     plot(sti.*TU, si, mkrs{i}, 'Color', 'red', 'LineWidth', 1, 'MarkerSize', 10, 'DisplayName', names{i});
 end
-ylabel("Number of cells", 'FontSize', 18, 'FontName', 'Times');
+ylabel("Cell count", 'FontSize', 18, 'FontName', 'Times');
 xlim([0, sti(end).*TU]); 
 
 for i = 1:length(f)
@@ -68,7 +68,7 @@ for i=2:length(f)
     si_norm = si./s1; 
     plot(st1(2:end).*TU, si_norm(2:end), mkrs{i}, 'Color', 'red', 'LineWidth', 1, 'MarkerSize', 10, 'HandleVisibility', 'off');
 end
-ylabel("Normalized cell number", 'FontSize', 18, 'FontName', 'Times');
+ylabel("Normalized cell count", 'FontSize', 18, 'FontName', 'Times');
 xlim([0, st1(end).*TU]); 
 
 ax.YAxis(1).Color = [0 0 1];
