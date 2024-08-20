@@ -602,12 +602,10 @@ void initialize_ik_nodes(TreeNode* P, TreeNode* r, Grid* G){
 }
 
 
-void recursive_loop(void (*h)(double*, double*, double*, double*), TreeNode** P, Grid* G, Meas M, Traj T, int level, int* current_state, double* current_state_vec, bool BOUNDS, double (*BOUND_f)(double*, double*)){
+void recursive_loop(TreeNode** P, Grid* G, Meas M, Traj T, int level, int* current_state, double* current_state_vec, bool BOUNDS, double (*BOUND_f)(double*, double*)){
     if (level == G->dim) {
         uint64_t key = state_conversion(G->dim, current_state);
-        double y[M.dim]; 
-        (*h)(y, current_state_vec, G->dx, T.coef); 
-        double prob = gauss_probability(G->dim, y, M);
+        double prob = gauss_probability(M.dim, current_state_vec, M);
         *P = insert_recursive(*P, G, T, prob, key, current_state, BOUNDS, BOUND_f);
         return;
     }
@@ -617,13 +615,13 @@ void recursive_loop(void (*h)(double*, double*, double*, double*), TreeNode** P,
     for (int i = start; i <= end; i++) {
         current_state[level] = i;
         current_state_vec[level] = i * G->dx[level] + G->center[level];
-        recursive_loop(h, P, G, M, T, level + 1, current_state, current_state_vec, BOUNDS, BOUND_f);
+        recursive_loop(P, G, M, T, level + 1, current_state, current_state_vec, BOUNDS, BOUND_f);
     }
 }
 
-void initialize_grid(void (*f)(double*, double*, double*, double*), void (*h)(double*, double*, double*, double*), TreeNode** P, Grid* G, Meas M, Traj T, bool BOUNDS, double (*BOUND_f)(double*, double*)){
+void initialize_grid(void (*f)(double*, double*, double*, double*), TreeNode** P, Grid* G, Meas M, Traj T, bool BOUNDS, double (*BOUND_f)(double*, double*)){
     int current_state[G->dim]; double current_state_vec[G->dim];
-    recursive_loop(h, P, G, M, T, 0, current_state, current_state_vec, BOUNDS, BOUND_f);
+    recursive_loop(P, G, M, T, 0, current_state, current_state_vec, BOUNDS, BOUND_f);
     *P = balance(*P); 
     initialize_adv(f, *P, G, T);
     initialize_ik_nodes(*P, *P, G);
@@ -1103,11 +1101,11 @@ void measurement_update_recursive(void (*h)(double*, double*, double*, double*),
     double y[M.dim];
     (*h)(y, x, G.dx, T.coef); 
 
-    double prob = gauss_probability(G.dim, y, M);   
+    double prob = gauss_probability(M.dim, y, M);   
     r->prob *= prob;
 }
 
-void run_gbees(void (*f)(double*, double*, double*, double*), void (*h)(double*, double*, double*, double*), double (*BOUND_f)(double*, double*), Grid G, Meas M, Traj T, char* P_DIR, char* M_DIR, int NUM_DIST, int NUM_MEAS, int DEL_STEP, int OUTPUT_FREQ, bool OUTPUT, bool RECORD, bool MEASURE, bool BOUNDS){
+void run_gbees(void (*f)(double*, double*, double*, double*), void (*h)(double*, double*, double*, double*), double (*BOUND_f)(double*, double*), Grid G, Meas M, Traj T, char* P_DIR, char* M_DIR, int NUM_DIST, int NUM_MEAS, int DEL_STEP, int OUTPUT_FREQ, int DIM_h, bool OUTPUT, bool RECORD, bool MEASURE, bool BOUNDS){
     char* P_PATH;
     double RECORD_TIME = M.T/(NUM_DIST-1);      
 
@@ -1115,7 +1113,7 @@ void run_gbees(void (*f)(double*, double*, double*, double*), void (*h)(double*,
 
     printf("Initializing distribution...\n\n");
 
-    initialize_grid(f, h, &P, &G, M, T, BOUNDS, BOUND_f); 
+    initialize_grid(f, &P, &G, M, T, BOUNDS, BOUND_f); 
     if(BOUNDS){G.lo_bound = DBL_MAX; G.hi_bound = -DBL_MAX; set_bounds(P, &G);} 
     normalize_tree(P); 
 
@@ -1158,8 +1156,7 @@ void run_gbees(void (*f)(double*, double*, double*, double*), void (*h)(double*,
                 step_count += 1; G.dt = DBL_MAX;
             }
             
-
-            if ((step_count % OUTPUT_FREQ != 0)||(!OUTPUT)){ // print size to terminal
+            if (((step_count-1) % OUTPUT_FREQ != 0)||(!OUTPUT)){ // print size to terminal
                 max_key = 0; a_count = 0; tot_count = 0; 
                 get_tree_info(P, &G, &max_key, &a_count, &tot_count);
                 printf("Timestep: %d-%d, Program time: %f s, Sim. time: %f", nm, step_count - 1, ((double)(clock()-start))/CLOCKS_PER_SEC, tt + mt + rt); 
@@ -1182,7 +1179,6 @@ void run_gbees(void (*f)(double*, double*, double*, double*), void (*h)(double*,
             printf("\nPERFORMING BAYESIAN UPDATE AT: %f TU...\n\n", tt);
 
             // freeing previous measurement 
-            int DIM_H = M.dim; 
             Meas_free(&M);                                                    
 
             // reading new measurement
@@ -1195,7 +1191,7 @@ void run_gbees(void (*f)(double*, double*, double*, double*), void (*h)(double*,
                 exit(EXIT_FAILURE);
             }
             snprintf(M_FILE, length, "%s%d%s", M_FILE_NAME, nm+1, M_FILE_EXT);
-            M = Meas_create(DIM_H, M_DIR, M_FILE);                                       
+            M = Meas_create(DIM_h, M_DIR, M_FILE);                                       
             free(M_FILE); 
 
             // performing discrete update
