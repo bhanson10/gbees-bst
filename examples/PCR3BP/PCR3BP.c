@@ -36,7 +36,7 @@ int main(){
     char* P_DIR = "<path_to_pdf>";       // Saved PDFs path
     char* M_DIR = "./measurements";    // Measurement path
     char* M_FILE = "measurement0.txt"; // Measurement file
-    Meas M = Meas_create(DIM_h, M_DIR, M_FILE);
+    Meas M = Meas_create(DIM_f, M_DIR, M_FILE);
     //==========================================================================================================//
 
     //========================================== Read in user inputs ===========================================//
@@ -62,7 +62,7 @@ int main(){
     //==========================================================================================================//
 
     //================================================= GBEES ==================================================//
-    run_gbees(PCR3BP, identity, PCR3BP_J, G, M, T, P_DIR, M_DIR, NUM_DIST, NUM_MEAS, DEL_STEP, OUTPUT_FREQ, OUTPUT, RECORD, MEASURE, BOUNDS);
+    run_gbees(PCR3BP, identity, PCR3BP_J, G, M, T, P_DIR, M_DIR, NUM_DIST, NUM_MEAS, DEL_STEP, OUTPUT_FREQ, DIM_h, OUTPUT, RECORD, MEASURE, BOUNDS);
 
     return 0;
 }

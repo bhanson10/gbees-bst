@@ -36,14 +36,14 @@ print("Reading in initial discrete measurement...\n")
 P_DIR = "<path_to_pdf>"      # Saved PDFs path
 M_DIR = "./measurements"     # Measurement path
 M_FILE = "measurement0.txt"; # Measurement file
-M = gbees.Meas_create(DIM_h, M_DIR, M_FILE)
+M = gbees.Meas_create(DIM_f, M_DIR, M_FILE)
 #============================================================================================================#
 
 #=========================================== Read in user inputs ============================================#
 print("Reading in user inputs...\n")
 
-dx = [None] * DIM_h                             # Grid width, default is half of the std. dev. from the initial measurement 
-for i in range(DIM_h):
+dx = [None] * DIM_f                             # Grid width, default is half of the std. dev. from the initial measurement 
+for i in range(DIM_f):
     dx[i] = (M.cov[i][i]**(0.5))/2
 G = gbees.Grid_create(DIM_h, 1E-7, M.mean, dx); # Inputs: (dimension, probability threshold, center, grid width)    
  
@@ -61,4 +61,4 @@ BOUNDS = True;                                # Add inadmissible regions to grid
 #============================================================================================================#
 
 #================================================== GBEES ===================================================#
-gbees.run_gbees(PCR3BP, identity, PCR3BP_J, G, M, T, P_DIR, M_DIR, NUM_DIST, NUM_MEAS, DEL_STEP, OUTPUT_FREQ, OUTPUT, RECORD, MEASURE, BOUNDS)
+gbees.run_gbees(PCR3BP, identity, PCR3BP_J, G, M, T, P_DIR, M_DIR, NUM_DIST, NUM_MEAS, DEL_STEP, OUTPUT_FREQ, DIM_h, OUTPUT, RECORD, MEASURE, BOUNDS)
