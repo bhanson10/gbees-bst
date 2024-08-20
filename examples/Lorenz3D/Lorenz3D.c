@@ -1,7 +1,7 @@
 #include "../../gbees.c"
 
 #define DIM_f 3 // State dimension
-#define DIM_h 3 // Measurement dimension
+#define DIM_h 1 // Measurement dimension
 
 // This function defines the dynamics model - required
 void Lorenz3D(double* f, double* x, double* dx, double* coef){
@@ -11,10 +11,8 @@ void Lorenz3D(double* f, double* x, double* dx, double* coef){
 }
 
 // This function defines the measurement model - required
-void identity(double* h, double* x, double* dx, double* coef){
-    h[0] = x[0];
-    h[1] = x[1];
-    h[2] = x[2];
+void z(double* h, double* x, double* dx, double* coef){
+    h[0] = x[2];
 }
 
 int main(){
@@ -24,7 +22,7 @@ int main(){
     char* P_DIR = "<path_to_pdf>";     // Saved PDFs path
     char* M_DIR = "./measurements";    // Measurement path
     char* M_FILE = "measurement0.txt"; // Measurement file
-    Meas M = Meas_create(DIM_h, M_DIR, M_FILE);
+    Meas M = Meas_create(DIM_f, M_DIR, M_FILE);
     //==========================================================================================================//
 
     //========================================== Read in user inputs ===========================================//
@@ -34,7 +32,7 @@ int main(){
     for(int i = 0; i < DIM_f; i ++){
         dx[i] = pow(M.cov[i][i],0.5)/2;
     }
-    Grid G = Grid_create(DIM_f, 2E-5, M.mean, dx);              // Inputs: (dimension, probability threshold, center, grid width)       
+    Grid G = Grid_create(DIM_f, 1E-6, M.mean, dx);              // Inputs: (dimension, probability threshold, center, grid width)       
 
     double coef[] = {4.0, 1.0, 48.0};                         // Lorenz3D trajectory attributes (sigma, beta, r)
     Traj T = Traj_create(3, coef); // Inputs: (# of coefficients, coefficients)
@@ -50,7 +48,7 @@ int main(){
     //==========================================================================================================//
 
     //================================================= GBEES ==================================================//
-    run_gbees(Lorenz3D, identity, NULL, G, M, T, P_DIR, M_DIR, NUM_DIST, NUM_MEAS, DEL_STEP, OUTPUT_FREQ, OUTPUT, RECORD, MEASURE, BOUNDS);
+    run_gbees(Lorenz3D, z, NULL, G, M, T, P_DIR, M_DIR, NUM_DIST, NUM_MEAS, DEL_STEP, OUTPUT_FREQ, DIM_h, OUTPUT, RECORD, MEASURE, BOUNDS);
 
     return 0;
 }
