@@ -1,7 +1,7 @@
 #include "../../gbees.c"
 
 #define DIM_f 4 // State dimension
-#define DIM_h 4 // Measurement dimension
+#define DIM_h 3 // Measurement dimension
 
 // This function defines the dynamics model - required
 void PCR3BP(double* f, double* x, double* dx, double* coef){
@@ -13,12 +13,10 @@ void PCR3BP(double* f, double* x, double* dx, double* coef){
     f[3] = -2*x[2]+x[1]-(coef[0]*x[1]/r2)-((1-coef[0])*x[1]/r1);
 }
 
-// This function defines the measurement model - required
-void identity(double* h, double* x, double* dx, double* coef){
-    h[0] = x[0];
-    h[1] = x[1];
-    h[2] = x[2];
-    h[3] = x[3];
+void rtrr(double* h, double* x, double* dx, double* coef){
+    h[0] = pow(pow(x[0] - (1 - coef[0]), 2) + pow(x[1], 2),0.5); 
+    h[1] = atan2(x[1], x[0] - (1 - coef[0])); 
+    h[2] = ((x[0] - (1 - coef[0]))*x[2] + x[1]*x[3])/h[0];
 }
 
 // This function defines the initial grid boundaries - optional
@@ -33,7 +31,7 @@ int main(){
     //=================================== Read in initial discrete measurement =================================//
     printf("Reading in initial discrete measurement...\n\n");
 
-    char* P_DIR = "<path_to_pdf>";       // Saved PDFs path
+    char* P_DIR = "./results/c"; // Saved PDFs path
     char* M_DIR = "./measurements";    // Measurement path
     char* M_FILE = "measurement0.txt"; // Measurement file
     Meas M = Meas_create(DIM_f, M_DIR, M_FILE);
@@ -41,7 +39,7 @@ int main(){
 
     //========================================== Read in user inputs ===========================================//
     printf("Reading in user inputs...\n\n");
-
+    
     double del[DIM_f];                              // Grid width, default is half of the std. dev. from the initial measurement 
     for(int i = 0; i < DIM_f; i ++){
         del[i] = pow(M.cov[i][i],0.5)/2;
@@ -62,7 +60,7 @@ int main(){
     //==========================================================================================================//
 
     //================================================= GBEES ==================================================//
-    run_gbees(PCR3BP, identity, PCR3BP_J, G, M, T, P_DIR, M_DIR, NUM_DIST, NUM_MEAS, DEL_STEP, OUTPUT_FREQ, DIM_h, OUTPUT, RECORD, MEASURE, BOUNDS);
+    run_gbees(PCR3BP, rtrr, PCR3BP_J, G, M, T, P_DIR, M_DIR, NUM_DIST, NUM_MEAS, DEL_STEP, OUTPUT_FREQ, DIM_h, OUTPUT, RECORD, MEASURE, BOUNDS);
 
     return 0;
 }

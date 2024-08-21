@@ -1,9 +1,10 @@
 import sys
 sys.path.append('../../')
 import gbeespy as gbees  # type: ignore
+import math
 
 DIM_f = 4 # State dimension
-DIM_h = 4 # Measurement dimension
+DIM_h = 3 # Measurement dimension
 
 # This function defines the dynamics model - required
 def PCR3BP(x, dx, coef):
@@ -16,12 +17,11 @@ def PCR3BP(x, dx, coef):
     return [v1, v2, v3, v4]
 
 # This function defines the measurement model - required
-def identity(x, dx, coef):
-    v1 = x[0]
-    v2 = x[1]
-    v3 = x[2]
-    v4 = x[3]
-    return [v1, v2, v3, v4]
+def rtrr(x, dx, coef):
+    v1 = ((x[0] - (1- coef[0]))**2 + (x[1])**2)**0.5 
+    v2 = math.atan2(x[1],  x[0] - (1 - coef[0]))
+    v3 = ((x[0] - (1 - coef[0]))*x[2] + x[1]*x[3])/v1
+    return [v1, v2, v3]
 
 # This function defines the initial grid boundaries - optional
 def PCR3BP_J(x, coef):
@@ -33,7 +33,7 @@ def PCR3BP_J(x, coef):
 #==================================== Read in initial discrete measurement ==================================#
 print("Reading in initial discrete measurement...\n")
 
-P_DIR = "<path_to_pdf>"      # Saved PDFs path
+P_DIR = "./results/python"      # Saved PDFs path
 M_DIR = "./measurements"     # Measurement path
 M_FILE = "measurement0.txt"; # Measurement file
 M = gbees.Meas_create(DIM_f, M_DIR, M_FILE)
@@ -61,4 +61,4 @@ BOUNDS = True;                                # Add inadmissible regions to grid
 #============================================================================================================#
 
 #================================================== GBEES ===================================================#
-gbees.run_gbees(PCR3BP, identity, PCR3BP_J, G, M, T, P_DIR, M_DIR, NUM_DIST, NUM_MEAS, DEL_STEP, OUTPUT_FREQ, DIM_h, OUTPUT, RECORD, MEASURE, BOUNDS)
+gbees.run_gbees(PCR3BP, rtrr, PCR3BP_J, G, M, T, P_DIR, M_DIR, NUM_DIST, NUM_MEAS, DEL_STEP, OUTPUT_FREQ, DIM_h, OUTPUT, RECORD, MEASURE, BOUNDS)
