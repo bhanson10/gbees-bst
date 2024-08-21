@@ -33,7 +33,7 @@ def PCR3BP_J(x, coef):
 #==================================== Read in initial discrete measurement ==================================#
 print("Reading in initial discrete measurement...\n")
 
-P_DIR = "./results/python"      # Saved PDFs path
+P_DIR = "<path_to_pdf>"      # Saved PDFs path
 M_DIR = "./measurements"     # Measurement path
 M_FILE = "measurement0.txt"; # Measurement file
 M = gbees.Meas_create(DIM_f, M_DIR, M_FILE)
