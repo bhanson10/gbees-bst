@@ -15,7 +15,7 @@ options = odeset('MaxStep', 1E-3, 'InitialStep', 1E-3, 'RelTol', 1e-6);
 [~, x] = ode87(@(t, x) Lorenz3D(t, x ,prop), [0 50], ic, options);
 
 nexttile(1); 
-plot3(x(:,1), x(:,2), x(:,3), 'g-','linewidth', 1.5, 'HandleVisibility', 'off');  
+plot3(x(:,1), x(:,2), x(:,3), 'g-','linewidth', .5, 'HandleVisibility', 'off');  
 drawnow;
 
 [~, x] = ode87(@(t, x) Lorenz3D(t, x, prop), [0 prop.T], ic, options);
@@ -35,12 +35,12 @@ for nm=0:NM-1
     P_DIR_SUB = P_DIR + "/P" + num2str(nm); 
     FILE_LIST = dir(fullfile(P_DIR_SUB, '*.txt'));  % List only .txt files
     num_files = numel(FILE_LIST);
-    
-    for i=[0:num_files-1]
+
+    for i=[0:num_files - 1]
         P_FILE = P_DIR_SUB + "/pdf_" + num2str(i) + ".txt";
 
         [x_gbees, P_gbees, n_gbees, t_gbees(count)] = parse_nongaussian_txt(P_FILE);
-    
+
         xest_gbees{count} = zeros(size(x_gbees(1,:)));
         for j=1:n_gbees
             xest_gbees{count} = xest_gbees{count}+x_gbees(j,:).*P_gbees(j);
