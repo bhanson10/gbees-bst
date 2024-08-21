@@ -35,10 +35,10 @@ t = t.*prop.TU;
 
 %% nominal trajectory
 nexttile(1); 
-plot(x(:,1),x(:,2),'k-','LineWidth',1,'HandleVisibility','off');
+plot(x(:,1),x(:,2),'k-','LineWidth', 2,'HandleVisibility','off');
 drawnow;
 nexttile(2); 
-plot(x(:,3),x(:,4),'k-','LineWidth', 1,'HandleVisibility','off');
+plot(x(:,3),x(:,4),'k-','LineWidth', 2,'HandleVisibility','off');
 drawnow;
 
 %% GBEES
