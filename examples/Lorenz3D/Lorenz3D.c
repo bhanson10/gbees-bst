@@ -28,23 +28,23 @@ int main(){
     //========================================== Read in user inputs ===========================================//
     printf("Reading in user inputs...\n\n");
 
-    double dx[DIM_f];                                           // Grid width, default is half of the std. dev. from the initial measurement 
+    double dx[DIM_f];                              // Grid width, default is half of the std. dev. from the initial measurement 
     for(int i = 0; i < DIM_f; i ++){
         dx[i] = pow(M.cov[i][i],0.5)/2;
     }
-    Grid G = Grid_create(DIM_f, 1E-6, M.mean, dx);              // Inputs: (dimension, probability threshold, center, grid width)       
+    Grid G = Grid_create(DIM_f, 5E-6, M.mean, dx); // Inputs: (dimension, probability threshold, center, grid width)       
 
-    double coef[] = {4.0, 1.0, 48.0};                         // Lorenz3D trajectory attributes (sigma, beta, r)
-    Traj T = Traj_create(3, coef); // Inputs: (# of coefficients, coefficients)
+    double coef[] = {4.0, 1.0, 48.0};              // Lorenz3D trajectory attributes (sigma, beta, r)
+    Traj T = Traj_create(3, coef);                 // Inputs: (# of coefficients, coefficients)
 
-    int NUM_DIST = 5;                                         // Number of distributions recorded per measurement
-    int NUM_MEAS = 2;                                         // Number of measurements
-    int DEL_STEP = 20;                                        // Number of steps per deletion procedure
-    int OUTPUT_FREQ = 20;                                     // Number of steps per output to terminal
-    bool OUTPUT = true;                                       // Write info to terminal
-    bool RECORD = true;                                       // Write PDFs to .txt file
-    bool MEASURE = true;                                      // Take discrete measurement updates
-    bool BOUNDS = false;                                      // Add inadmissible regions to grid
+    int NUM_DIST = 5;                              // Number of distributions recorded per measurement
+    int NUM_MEAS = 2;                              // Number of measurements
+    int DEL_STEP = 20;                             // Number of steps per deletion procedure
+    int OUTPUT_FREQ = 20;                          // Number of steps per output to terminal
+    bool OUTPUT = true;                            // Write info to terminal
+    bool RECORD = false;                           // Write PDFs to .txt file
+    bool MEASURE = true;                           // Take discrete measurement updates
+    bool BOUNDS = false;                           // Add inadmissible regions to grid
     //==========================================================================================================//
 
     //================================================= GBEES ==================================================//
