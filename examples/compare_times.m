@@ -1,7 +1,7 @@
 clear all; close all; clc; 
 
 mkrs = {"-o", "-square", "->", "-pentagram"}; 
-MDL = "<model_type>";
+SYS = "<system>";
 DIR = {"c", "python"}; 
 TU = 1; 
 names = {'c','python'};
@@ -9,7 +9,7 @@ time_unit = '(TU)';
 
 f = {}; 
 for i=1:length(names)
-    f{end+1} = fopen("./" + MDL + "/results/" + DIR{i} + "/runtime.txt", 'r');
+    f{end+1} = fopen("./" + SYS + "/results/" + DIR{i} + "/runtime.txt", 'r');
 end
 
 [st, pt, s] = parse_time_files(f);
@@ -74,7 +74,7 @@ xlim([0, st1(end).*TU]);
 ax.YAxis(1).Color = [0 0 1];
 ax.YAxis(2).Color = [1 0 0];
 
-title(tiles, MDL + " Runtime Comparison", 'FontWeight', 'Bold','FontName', 'Times','FontSize', 18);
+title(tiles, SYS + " Runtime Comparison", 'FontWeight', 'Bold','FontName', 'Times','FontSize', 18);
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %                                FUNCTIONS
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
