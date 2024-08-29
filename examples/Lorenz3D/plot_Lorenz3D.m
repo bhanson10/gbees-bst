@@ -59,9 +59,9 @@ end
 
 clear L; clear LH; 
 LH(1) = fill(nan, nan, nan, 'FaceAlpha', 0.7, 'FaceColor', 'cyan', 'EdgeColor', 'none');
-L{1} = "$p_\mathbf{x}(\mathbf{x}'|\mathbf{y}_0)\,\,\,$";
+L{1} = "$p_\mathbf{x}(\mathbf{x}', t_{0+})\,\,\,$";
 LH(2) = fill(nan, nan, nan, 'FaceAlpha', 0.7, 'FaceColor', 'magenta', 'EdgeColor', 'none');
-L{2} = "$p_\mathbf{x}(\mathbf{x}'|\mathbf{y}_1)\,\,\,$";
+L{2} = "$p_\mathbf{x}(\mathbf{x}', t_{1+})\,\,\,$";
 leg = legend(LH, L, 'Orientation', 'Horizontal', 'FontSize', 18, 'FontName', 'times', 'Interpreter', 'latex');
 leg.Layout.Tile = 'south';
 drawnow; 
