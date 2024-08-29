@@ -173,7 +173,6 @@ typedef struct TreeNode {
     double cfl_dt;
     int new_f;
     int ik_f;
-    int del_f;
     double bound_val; 
     TreeNode* left;
     TreeNode* right;
@@ -212,7 +211,6 @@ TreeNode* TreeNode_create(int dim, uint64_t key, double prob, int* state, double
         node->k_nodes[i] = NULL;
     }
     node->new_f = 0; 
-    node->del_f = 0; 
     node->bound_val = J; 
     node->left = NULL; 
     node->right = NULL; 
@@ -473,7 +471,6 @@ TreeNode* delete_node(TreeNode* r, uint64_t k, Grid G){
             r->cfl_dt = temp->cfl_dt;
             r->new_f = temp->new_f;
             r->ik_f = temp->ik_f;
-            r->del_f = temp->del_f;
             r->bound_val = temp->bound_val; 
             r->right = delete_node(r->right, temp->key, G);
         }
@@ -648,34 +645,27 @@ void get_sum(TreeNode* r, double* prob_sum){
     *prob_sum += r->prob;
 }
 
-void divide_sum(TreeNode* r, double prob_sum){
+void divide_sum(TreeNode* r, double prob_sum, Grid* G, uint64_t* max_key, int* a_count, int* tot_count){
     if (r == NULL){
         return;
     }
-    divide_sum(r->left, prob_sum);
-    divide_sum(r->right, prob_sum);
+    divide_sum(r->left, prob_sum, G, max_key, a_count, tot_count);
+    divide_sum(r->right, prob_sum, G, max_key, a_count, tot_count);
 
     r->prob /= prob_sum;
-}
-
-void normalize_tree(TreeNode* P){
-    double prob_sum = 0;
-    get_sum(P, &prob_sum);
-    divide_sum(P, prob_sum);
-}
-
-void get_tree_info(TreeNode* r, Grid* G, uint64_t* max_key, int* a_count, int* tot_count){
-    if (r == NULL){
-        return;
-    }
-    get_tree_info(r->left, G, max_key, a_count, tot_count);
-    get_tree_info(r->right, G, max_key, a_count, tot_count);
 
     *max_key = fmax(*max_key, r->key);
     if(r->prob >= G->thresh){
         *a_count += 1; 
     }
     *tot_count += 1; 
+}
+
+void normalize_tree(TreeNode* P, Grid* G, uint64_t* max_key, int* a_count, int* tot_count){
+    *max_key = 0; *a_count = 0; *tot_count = 0; 
+    double prob_sum = 0;
+    get_sum(P, &prob_sum);
+    divide_sum(P, prob_sum, G, max_key, a_count, tot_count);
 }
 
 char* concat_m(const char* str1, const char* str2, int num1) {
@@ -987,14 +977,15 @@ void update_prob(TreeNode* r, Grid G){
             r->prob -= (G.dt/G.dx[i])*(r->ctu[i]);
         }
     }
+    r->prob = fmax(r->prob, 0.0); 
 }
 
-void mark_cells(TreeNode* r, Grid G){
+void mark_cells(TreeNode* r, Grid G, double* del_probs, uint64_t* del_keys, int* idx){
     if (r == NULL){
         return;
     }
-    mark_cells(r->left, G);
-    mark_cells(r->right, G);
+    mark_cells(r->left, G, del_probs, del_keys, idx);
+    mark_cells(r->right, G, del_probs, del_keys, idx);
 
     r->ik_f = 0; bool DELETE = true;
     if (r->prob < G.thresh){
@@ -1060,28 +1051,83 @@ void mark_cells(TreeNode* r, Grid G){
         }
 
         if(DELETE){
-            r->del_f = 1;
+            del_probs[*idx] = r->prob; 
+            del_keys[*idx] = r->key; 
+            *idx += 1; 
         }
     }
 }
 
-void delete_cells(TreeNode** P, TreeNode* r, Grid G){
-    if (r == NULL){
-        return;
-    }
-    delete_cells(P, r->left, G);
-    delete_cells(P, r->right, G);
+int compare_indices(void *del_probs, const void *a, const void *b) {
+    const double *double_list = (double *)del_probs;
+    int idx1 = *(const int *)a;
+    int idx2 = *(const int *)b;
 
-    if(r->del_f == 1){
-        *P = delete_node(*P, r->key, G);
-        return; 
+    if (double_list[idx1] < double_list[idx2])
+        return -1;
+    else if (double_list[idx1] > double_list[idx2])
+        return 1;
+    else
+        return 0;
+}
+
+void sort_by_double(double *del_probs, uint64_t *del_keys, size_t n) {
+    int *indices = malloc(n * sizeof(int));
+    if (indices == NULL) {
+        perror("Failed to allocate memory for indices");
+        exit(EXIT_FAILURE);
+    }
+
+    for (size_t i = 0; i < n; i++) {
+        indices[i] = i;
+    }
+
+    // Sort the indices based on the corresponding doubles
+    qsort_r(indices, n, sizeof(int), del_probs, compare_indices);
+
+    // Create a temporary array to hold the sorted uint64_t's
+    double *sorted_del_probs = malloc(n * sizeof(uint64_t));
+    uint64_t *sorted_del_keys = malloc(n * sizeof(uint64_t));
+    if ((sorted_del_probs == NULL)||(sorted_del_keys == NULL)) {
+        perror("Failed to allocate memory for sorted probs or keys");
+        free(indices);
+        exit(EXIT_FAILURE);
+    }
+
+    for (size_t i = 0; i < n; i++) {
+        sorted_del_probs[i] = del_probs[indices[i]];
+        sorted_del_keys[i] = del_keys[indices[i]];
+    }
+
+    for (size_t i = 0; i < n; i++) {
+        del_probs[i] = sorted_del_probs[i];
+        del_keys[i] = sorted_del_keys[i];
+    }
+
+    free(indices);
+    free(sorted_del_probs);
+    free(sorted_del_keys);
+}
+
+void delete_cells(TreeNode** P, Grid G, double* del_probs, uint64_t* del_keys, int idx){
+    double del_prob_sum = 0; 
+    for(int i = 0; i < idx; i++){
+        del_prob_sum += del_probs[i]; 
+        if(del_probs[i]/(1-del_prob_sum) < G.thresh){
+            *P = delete_node(*P, del_keys[i], G);
+        }else{
+            break;
+        }
     }
 }
 
-void prune_tree(TreeNode** P, Grid G){
-    mark_cells(*P, G);
-    delete_cells(P, *P, G);
-    normalize_tree(*P);
+void prune_tree(TreeNode** P, Grid G, int tot_count){
+    double del_probs[tot_count];
+    uint64_t del_keys[tot_count];
+    int idx = 0; 
+    mark_cells(*P, G, del_probs, del_keys, &idx);
+    sort_by_double(del_probs, del_keys, idx);
+    delete_cells(P, G, del_probs, del_keys, idx);
     initialize_ik_nodes(*P, *P, &G);
 }
 
@@ -1107,6 +1153,9 @@ void measurement_update_recursive(void (*h)(double*, double*, double*, double*),
 
 void run_gbees(void (*f)(double*, double*, double*, double*), void (*h)(double*, double*, double*, double*), double (*BOUND_f)(double*, double*), Grid G, Meas M, Traj T, char* P_DIR, char* M_DIR, int NUM_DIST, int NUM_MEAS, int DEL_STEP, int OUTPUT_FREQ, int DIM_h, bool OUTPUT, bool RECORD, bool MEASURE, bool BOUNDS){
     char* P_PATH;
+    uint64_t max_key; 
+    int a_count; 
+    int tot_count; 
     double RECORD_TIME = M.T/(NUM_DIST-1);      
 
     TreeNode* P = NULL; 
@@ -1115,15 +1164,13 @@ void run_gbees(void (*f)(double*, double*, double*, double*), void (*h)(double*,
 
     initialize_grid(f, &P, &G, M, T, BOUNDS, BOUND_f); 
     if(BOUNDS){G.lo_bound = DBL_MAX; G.hi_bound = -DBL_MAX; set_bounds(P, &G);} 
-    normalize_tree(P); 
+    normalize_tree(P, &G, &max_key, &a_count, &tot_count); 
 
     printf("Entering time marching...\n\n");
 
     clock_t start = clock(); 
-    double tt = 0; uint64_t max_key; int a_count; int tot_count; 
+    double tt = 0;
     for(int nm = 0; nm < NUM_MEAS; nm++){
-        max_key = 0; a_count = 0; tot_count = 0; 
-        get_tree_info(P, &G, &max_key, &a_count, &tot_count); 
         printf("Timestep: %d-0, Program time: %f s, Sim. time: %f", nm, ((double)(clock()-start))/CLOCKS_PER_SEC, tt); 
         printf(" TU, Active/Total Cells: %d/%d, Max key %%: %e\n", a_count, tot_count, (double)(max_key)/(pow(2,64)-1)*100); 
         if(RECORD){P_PATH = concat_p(P_DIR, "/P", nm, "/pdf_", 0); record_data(P, P_PATH, G, tt); free(P_PATH);};
@@ -1140,15 +1187,14 @@ void run_gbees(void (*f)(double*, double*, double*, double*), void (*h)(double*,
                 rt += G.dt;
                 godunov_method(&P, G);
                 update_prob(P, G);
-                normalize_tree(P);
+                normalize_tree(P, &G, &max_key, &a_count, &tot_count); 
 
                 if (step_count % DEL_STEP == 0) { // deletion procedure
-                    prune_tree(&P, G);
+                    prune_tree(&P, G, tot_count);
+                    normalize_tree(P, &G, &max_key, &a_count, &tot_count); 
                 }
 
                 if ((OUTPUT) && (step_count % OUTPUT_FREQ == 0)) { // print size to terminal
-                    max_key = 0; a_count = 0; tot_count = 0; 
-                    get_tree_info(P, &G, &max_key, &a_count, &tot_count); 
                     printf("Timestep: %d-%d, Program time: %f s, Sim. time: %f", nm, step_count, ((double)(clock()-start))/CLOCKS_PER_SEC, tt + mt + rt); 
                     printf(" TU, Active/Total Cells: %d/%d, Max key %%: %e\n", a_count, tot_count, (double)(max_key)/(pow(2,64)-1)*100); 
                 }
@@ -1156,9 +1202,7 @@ void run_gbees(void (*f)(double*, double*, double*, double*), void (*h)(double*,
                 step_count += 1; G.dt = DBL_MAX;
             }
             
-            if (((step_count-1) % OUTPUT_FREQ != 0)||(!OUTPUT)){ // print size to terminal
-                max_key = 0; a_count = 0; tot_count = 0; 
-                get_tree_info(P, &G, &max_key, &a_count, &tot_count);
+            if (((step_count-1) % OUTPUT_FREQ != 0)||(!OUTPUT)){ // print size to terminal  
                 printf("Timestep: %d-%d, Program time: %f s, Sim. time: %f", nm, step_count - 1, ((double)(clock()-start))/CLOCKS_PER_SEC, tt + mt + rt); 
                 printf(" TU, Active/Total Cells: %d/%d, Max key %%: %e\n", a_count, tot_count, (double)(max_key)/(pow(2,64)-1)*100); 
             }
@@ -1196,8 +1240,9 @@ void run_gbees(void (*f)(double*, double*, double*, double*), void (*h)(double*,
 
             // performing discrete update
             measurement_update_recursive(h, P, G, M, T);                                     
-            normalize_tree(P);
-            prune_tree(&P, G);
+            normalize_tree(P, &G, &max_key, &a_count, &tot_count); 
+            prune_tree(&P, G, tot_count);
+            normalize_tree(P, &G, &max_key, &a_count, &tot_count); 
         }
     }
     

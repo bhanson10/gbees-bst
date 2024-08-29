@@ -64,7 +64,6 @@ TreeNode._fields_ = [
     ("cfl_dt", ct.c_double),
     ("new_f", ct.c_int),
     ("ik_f", ct.c_int),
-    ("del_f", ct.c_int),
     ("bound_val", ct.c_double),
     ("left", ct.POINTER(TreeNode)),
     ("right", ct.POINTER(TreeNode))
