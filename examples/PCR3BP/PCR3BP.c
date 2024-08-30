@@ -46,17 +46,17 @@ int main(){
     }
     Grid G = Grid_create(DIM_f, 1E-7, M.mean, del); // Inputs: (dimension, probability threshold, center, grid width)       
 
-    double coef[] = {1.901109735892602E-07};       // PCR3BP trajectory attributes (mu)
-    Traj T = Traj_create(1, coef);                // Inputs: (# of coefficients, coefficients)
+    double coef[] = {1.901109735892602E-07};        // PCR3BP trajectory attributes (mu)
+    Traj T = Traj_create(1, coef);                  // Inputs: (# of coefficients, coefficients)
 
-    int NUM_DIST = 8;                             // Number of distributions recorded per measurement
-    int NUM_MEAS = 4;                             // Number of measurements
-    int DEL_STEP = 20;                            // Number of steps per deletion procedure
-    int OUTPUT_FREQ = 20;                         // Number of steps per output to terminal
-    bool OUTPUT = false;                          // Write info to terminal
-    bool RECORD = true;                           // Write PDFs to .txt file
-    bool MEASURE = true;                          // Take discrete measurement updates
-    bool BOUNDS = true;                           // Add inadmissible regions to grid
+    int NUM_DIST = 8;                               // Number of distributions recorded per measurement
+    int NUM_MEAS = 4;                               // Number of measurements
+    int DEL_STEP = 20;                              // Number of steps per deletion procedure
+    int OUTPUT_FREQ = 20;                           // Number of steps per output to terminal
+    bool OUTPUT = false;                            // Write info to terminal
+    bool RECORD = false;                            // Write PDFs to .txt file
+    bool MEASURE = true;                            // Take discrete measurement updates
+    bool BOUNDS = true;                             // Add inadmissible regions to grid
     //==========================================================================================================//
 
     //================================================= GBEES ==================================================//
