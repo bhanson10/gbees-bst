@@ -26,7 +26,7 @@ Meas Meas_create(int dim, const char* M_DIR, const char* M_FILE) {
 
     FILE *m_file = fopen(M_PATH, "r");
     if (m_file == NULL) {
-        fprintf(stderr, "Error: could not open file %s\n", M_PATH);
+        fprintf(stderr, "Error: could not open file %s", M_PATH);
         exit(EXIT_FAILURE);
     }
 
@@ -35,13 +35,13 @@ Meas Meas_create(int dim, const char* M_DIR, const char* M_FILE) {
     M.mean = malloc(dim * sizeof(double));
     M.cov = malloc(dim * sizeof(double *));
     if (M.mean == NULL || M.cov == NULL) {
-        fprintf(stderr, "Error: memory allocation failure during measurement creation\n");
+        perror("Error: memory allocation failure during measurement creation");
         exit(EXIT_FAILURE);
     }
     for (int i = 0; i < dim; i++) {
         M.cov[i] = malloc(dim * sizeof(double));
         if (M.cov[i] == NULL) {
-            fprintf(stderr, "Error: memory allocation failure during measurement creation\n");
+            perror("Error: memory allocation failure during measurement creation");
             exit(EXIT_FAILURE);
         }
     }
@@ -113,7 +113,7 @@ Grid Grid_create(int dim, double thresh, double* center, double* dx){
     G.center = malloc(dim * sizeof(double));
     G.dx = malloc(dim * sizeof(double *));
     if (G.center == NULL || G.dx == NULL) {
-        fprintf(stderr, "Error: memory allocation failure during grid creation\n");
+        perror("Error: memory allocation failure during grid creation");
         exit(EXIT_FAILURE);
     }
     for(int i = 0; i < dim; i++){
@@ -143,7 +143,7 @@ Traj Traj_create(int n, double* coef){
     Traj T; 
     T.coef = malloc(n * sizeof(double));
     if (T.coef == NULL) {
-        fprintf(stderr, "Error: memory allocation failure during trajectory creation\n");
+        perror("Error: memory allocation failure during trajectory creation");
         exit(EXIT_FAILURE);
     }
     for(int i = 0; i < n; i++){
@@ -181,7 +181,7 @@ typedef struct TreeNode {
 TreeNode* TreeNode_create(int dim, uint64_t key, double prob, int* state, double J) {
     TreeNode* node = (TreeNode*)malloc(sizeof(TreeNode));
     if (node == NULL) {
-        fprintf(stderr, "Error: memory allocation failure during TreeNode creation\n");
+        perror("Error: memory allocation failure during TreeNode creation");
         exit(EXIT_FAILURE);
     }
     node->key = key;
@@ -199,7 +199,7 @@ TreeNode* TreeNode_create(int dim, uint64_t key, double prob, int* state, double
         if (node->state) free(node->state);
         if (node->i_nodes) free(node->i_nodes);
         if (node->k_nodes) free(node->k_nodes);
-        fprintf(stderr, "Error: memory allocation failure during TreeNode creation\n");
+        perror("Error: memory allocation failure during TreeNode creation");
         exit(EXIT_FAILURE);
     }
 
@@ -251,7 +251,7 @@ uint64_t rosenberg_pair(const int* state, int d, int m) { // Recursive Rosenberg
 
     int* new_state = (int*)malloc((d-1) * sizeof(int));
     if (new_state == NULL) {
-        fprintf(stderr, "Memory allocation failure during Rosenberg pairing\n");
+        perror("Error: memory allocation failure during Rosenberg pairing");
         exit(EXIT_FAILURE);
     }
     for (int i = 0; i < d-1; i++) {
@@ -273,7 +273,7 @@ uint64_t rosenberg_pair(const int* state, int d, int m) { // Recursive Rosenberg
 uint64_t state_conversion(int dim, const int* state) { // Convert from n-dimensional state to unique key via Rosenberg pairing
     int* shift_state = (int*)malloc(dim * sizeof(int));
     if (shift_state == NULL) {
-        fprintf(stderr, "Memory allocation failure during state conversion\n");
+        perror("Error: memory allocation failure during state conversion");
         exit(EXIT_FAILURE);
     }
 
@@ -325,7 +325,7 @@ void invertMatrix(Meas M, double* inverse, int size) {
 
     for (i = 0; i < size; i++) {
         if (augmented[i * 2 * size + i] == 0) {
-            fprintf(stderr, "Matrix inversion error: zero pivot element.\n");
+            perror("Error: matrix inversion error, zero pivot element");
             exit(EXIT_FAILURE);
         }
         for (j = 0; j < size; j++) {
@@ -674,7 +674,7 @@ char* concat_m(const char* str1, const char* str2, int num1) {
     size_t total_len = strlen(str1) + strlen(str2) + num1_len + strlen(str3) + 1; 
     char* result = (char*)malloc(total_len * sizeof(char));
     if (result == NULL) {
-        fprintf(stderr, "Error: memory allocation failure during concat_m\n");
+        perror("Error: memory allocation failure during concat_m");
         exit(EXIT_FAILURE);
     }
     strcpy(result, str1);
@@ -694,7 +694,7 @@ char* concat_p(const char* str1, const char* str2, int num1, const char* str3, i
     size_t total_len = strlen(str1) + strlen(str2) + num1_len + strlen(str3) + num2_len + strlen(str4) + 1; 
     char* result = (char*)malloc(total_len * sizeof(char));
     if (result == NULL) {
-        fprintf(stderr, "Error: memory allocation failure during concat_p\n");
+        perror("Error: memory allocation failure during concat_p");
         exit(EXIT_FAILURE);
     }
     strcpy(result, str1);
@@ -731,7 +731,7 @@ void write_file(FILE* myfile, TreeNode* r, Grid G){
 void record_data(TreeNode* r, const char* FILE_NAME, Grid G, const double t){
     FILE* file = fopen(FILE_NAME, "w");
     if (file == NULL) {
-        fprintf(stderr, "Error: could not open file %s\n", FILE_NAME);
+        fprintf(stderr, "Error: could not open file %s", FILE_NAME);
         exit(EXIT_FAILURE);
     }
     fprintf(file, "%lf\n", t);
@@ -1074,7 +1074,7 @@ int compare_indices(void *del_probs, const void *a, const void *b) {
 void sort_by_double(double *del_probs, uint64_t *del_keys, size_t n) {
     int *indices = malloc(n * sizeof(int));
     if (indices == NULL) {
-        perror("Failed to allocate memory for indices");
+        perror("Error: failed to allocate memory for indices");
         exit(EXIT_FAILURE);
     }
 
@@ -1089,7 +1089,7 @@ void sort_by_double(double *del_probs, uint64_t *del_keys, size_t n) {
     double *sorted_del_probs = malloc(n * sizeof(uint64_t));
     uint64_t *sorted_del_keys = malloc(n * sizeof(uint64_t));
     if ((sorted_del_probs == NULL)||(sorted_del_keys == NULL)) {
-        perror("Failed to allocate memory for sorted probs or keys");
+        perror("Error: failed to allocate memory for sorted probs or keys");
         free(indices);
         exit(EXIT_FAILURE);
     }
@@ -1122,13 +1122,18 @@ void delete_cells(TreeNode** P, Grid G, double* del_probs, uint64_t* del_keys, i
 }
 
 void prune_tree(TreeNode** P, Grid G, int tot_count){
-    double del_probs[tot_count];
-    uint64_t del_keys[tot_count];
+    double* del_probs = malloc(tot_count * sizeof(double));
+    uint64_t* del_keys = malloc(tot_count * sizeof(uint64_t));    
+    if ((del_keys == NULL)||(del_keys == NULL)){
+        perror("Error: memory allocation failure during del_probs/del_keys creation");
+    }
     int idx = 0; 
     mark_cells(*P, G, del_probs, del_keys, &idx);
     sort_by_double(del_probs, del_keys, idx);
     delete_cells(P, G, del_probs, del_keys, idx);
     initialize_ik_nodes(*P, *P, &G);
+    free(del_probs); 
+    free(del_keys); 
 }
 
 void measurement_update_recursive(void (*h)(double*, double*, double*, double*), TreeNode* r, Grid G, Meas M, Traj T){
@@ -1231,7 +1236,7 @@ void run_gbees(void (*f)(double*, double*, double*, double*), void (*h)(double*,
             int length = snprintf(NULL, 0, "%s%d%s", M_FILE_NAME, nm+1, M_FILE_EXT) + 1;
             char* M_FILE = (char *)malloc(length);
             if (M_FILE == NULL) {
-                fprintf(stderr, "Error: memory allocation failure during discrete measurement update\n");
+                perror("Error: memory allocation failure during discrete measurement update");
                 exit(EXIT_FAILURE);
             }
             snprintf(M_FILE, length, "%s%d%s", M_FILE_NAME, nm+1, M_FILE_EXT);
