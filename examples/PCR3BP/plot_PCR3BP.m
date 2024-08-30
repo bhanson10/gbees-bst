@@ -52,7 +52,7 @@ C = [238, 102, 119;  % Red
 C  = C/255;
 
 p.alpha = [0.3, 0.4, 0.7]; 
-P_DIR = "./results/c";
+P_DIR = "<path_to_pdf>";
 
 count = 1;
 for nm=0:NM-1
@@ -102,13 +102,13 @@ L{1} = "Enceladus\,\,\,";
 LH(2) = plot(NaN,NaN,'k-', 'LineWidth',1);
 L{2} = "Nominal\,\,\,";
 LH(3) = fill(nan, nan, nan, 'FaceAlpha', 0.7, 'FaceColor', C(1,:), 'EdgeColor', 'none');
-L{3} = "$p_\mathbf{x}(\mathbf{x}'|\mathbf{y}_0)\,\,\,$";
+L{3} = "$p_\mathbf{x}(\mathbf{x}', t_{0+})\,\,\,$";
 LH(4) = fill(nan, nan, nan, 'FaceAlpha', 0.7, 'FaceColor', C(2,:), 'EdgeColor', 'none');
-L{4} = "$p_\mathbf{x}(\mathbf{x}'|\mathbf{y}_1)\,\,\,$";
+L{4} = "$p_\mathbf{x}(\mathbf{x}', t_{1+})\,\,\,$";
 LH(5) = fill(nan, nan, nan, 'FaceAlpha', 0.7, 'FaceColor', C(3,:), 'EdgeColor', 'none');
-L{5} = "$p_\mathbf{x}(\mathbf{x}'|\mathbf{y}_2)\,\,\,$";
+L{5} = "$p_\mathbf{x}(\mathbf{x}', t_{2+})\,\,\,$";
 LH(6) = fill(nan, nan, nan, 'FaceAlpha', 0.7, 'FaceColor', C(4,:)', 'EdgeColor', 'none');
-L{6} = "$p_\mathbf{x}(\mathbf{x}'|\mathbf{y}_3)\,\,\,$";
+L{6} = "$p_\mathbf{x}(\mathbf{x}', t_{3+})\,\,\,$";
 leg = legend(LH, L, 'Orientation', 'Horizontal', 'FontSize', 18, 'FontName', 'times', 'Interpreter', 'latex');
 leg.Layout.Tile = 'south';
 drawnow; 
