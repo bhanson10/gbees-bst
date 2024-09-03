@@ -734,9 +734,105 @@ void record_data(TreeNode* r, const char* FILE_NAME, Grid G, const double t){
         fprintf(stderr, "Error: could not open file %s", FILE_NAME);
         exit(EXIT_FAILURE);
     }
+
     fprintf(file, "%lf\n", t);
     write_file(file, r, G);
     fclose(file);
+}
+
+
+void get_weighted_mean(TreeNode* r, Grid G, double* weighted_mean){
+    if (r == NULL){
+        return;
+    }
+    
+    get_weighted_mean(r->left, G, weighted_mean); 
+    get_weighted_mean(r->right, G, weighted_mean); 
+
+    for(int i = 0; i < G.dim; i++){
+        weighted_mean[i] += r->prob*(G.dx[i]*r->state[i]+G.center[i]);
+    }
+}
+
+void get_weighted_cov(TreeNode* r, Grid G, double* weighted_mean, double** weighted_cov){
+    if (r == NULL){
+        return;
+    }
+    
+    get_weighted_cov(r->left, G, weighted_mean, weighted_cov); 
+    get_weighted_cov(r->right, G, weighted_mean, weighted_cov); 
+
+    double* diff = malloc(G.dim * sizeof(double));
+    for(int i = 0; i < G.dim; i++){
+        diff[i] = weighted_mean[i] - (G.dx[i]*r->state[i]+G.center[i]);
+    }
+
+    for(int i = 0; i < G.dim; i++){
+        for(int j = 0; j < G.dim; j++){
+            weighted_cov[i][j] += r->prob * diff[i] * diff[j];
+        }
+    }
+}
+
+void check_double_precision(Grid G, double* weighted_mean, double** weighted_cov){
+    double EPS = 2.220446049250313e-16;
+
+    for(int i = 0; i < G.dim; i++){
+        if(weighted_mean[i] < EPS){
+            weighted_mean[i] = 0.0;
+        }
+        for(int j = 0; j < G.dim; j++){
+            if(weighted_cov[i][j] < EPS){
+                weighted_cov[i][j] = 0.0;
+            }
+        }
+    }
+}
+
+void write_moments(FILE* myfile, Grid G, double* weighted_mean, double** weighted_cov){
+    
+    for(int i = 0; i < G.dim-1; i++){
+        fprintf(myfile, "%.10e ", weighted_mean[i]);
+    }
+    fprintf(myfile, "%.10e\n\n", weighted_mean[G.dim - 1]);
+
+    for(int i = 0; i < G.dim; i++){
+        for(int j = 0; j < G.dim - 1; j++){
+            fprintf(myfile, "%.10e ", weighted_cov[i][j]);
+        }
+        if(i != G.dim - 1){
+            fprintf(myfile, "%.10e\n", weighted_cov[i][G.dim - 1]); 
+        }else{
+            fprintf(myfile, "%.10e", weighted_cov[i][G.dim - 1]); 
+        }
+    }
+}
+
+void record_moments(TreeNode* r, const char* FILE_NAME, Grid G, const double t){
+    FILE* file = fopen(FILE_NAME, "w");
+    if (file == NULL) {
+        fprintf(stderr, "Error: could not open file %s", FILE_NAME);
+        exit(EXIT_FAILURE);
+    }
+
+    double* weighted_mean = malloc(G.dim * sizeof(double));
+    double** weighted_cov = malloc(G.dim * G.dim * sizeof(double*));
+    for(int i = 0; i < G.dim; i++){
+        weighted_mean[i] = 0; 
+        weighted_cov[i] = malloc(G.dim* sizeof(double *));
+        for(int j = 0; j < G.dim; j++){
+            weighted_cov[i][j] = 0.0;
+        }
+    }
+
+    get_weighted_mean(r, G, weighted_mean); 
+    get_weighted_cov(r, G, weighted_mean, weighted_cov);
+    check_double_precision(G, weighted_mean, weighted_cov); 
+    fprintf(file, "%lf\n\n", t);
+    write_moments(file, G, weighted_mean, weighted_cov);
+    fclose(file);
+    free(weighted_mean);
+    free(weighted_cov);
 }
 
 void create_neighbors(TreeNode** P, TreeNode* r, Grid G, Traj T, bool BOUNDS, double (*BOUND_f)(double*, double*)){
@@ -1179,8 +1275,9 @@ void run_gbees(void (*f)(double*, double*, double*, double*), void (*h)(double*,
         printf("Timestep: %d-0, Program time: %f s, Sim. time: %f", nm, ((double)(clock()-start))/CLOCKS_PER_SEC, tt); 
         printf(" TU, Active/Total Cells: %d/%d, Max key %%: %e\n", a_count, tot_count, (double)(max_key)/(pow(2,64)-1)*100); 
         if(RECORD){P_PATH = concat_p(P_DIR, "/P", nm, "/pdf_", 0); record_data(P, P_PATH, G, tt); free(P_PATH);};
+        // P_PATH = concat_p(P_DIR, "/M", nm, "/moments_", 0); record_moments(P, P_PATH, G, tt); free(P_PATH);
 
-        double mt = 0; int record_count = 1; int step_count = 1; double rt;
+        double mt = 0; int record_count = 1; int step_count = 1; double rt; 
         while(fabs(mt - M.T) > TOL) { // time between discrete measurements
 
             rt = 0;
@@ -1202,6 +1299,7 @@ void run_gbees(void (*f)(double*, double*, double*, double*), void (*h)(double*,
                 if ((OUTPUT) && (step_count % OUTPUT_FREQ == 0)) { // print size to terminal
                     printf("Timestep: %d-%d, Program time: %f s, Sim. time: %f", nm, step_count, ((double)(clock()-start))/CLOCKS_PER_SEC, tt + mt + rt); 
                     printf(" TU, Active/Total Cells: %d/%d, Max key %%: %e\n", a_count, tot_count, (double)(max_key)/(pow(2,64)-1)*100); 
+                    // P_PATH = concat_p(P_DIR, "/M", nm, "/moments_", moment_count); record_moments(P, P_PATH, G, tt + mt + rt); free(P_PATH);
                 }
 
                 step_count += 1; G.dt = DBL_MAX;
@@ -1210,6 +1308,7 @@ void run_gbees(void (*f)(double*, double*, double*, double*), void (*h)(double*,
             if (((step_count-1) % OUTPUT_FREQ != 0)||(!OUTPUT)){ // print size to terminal  
                 printf("Timestep: %d-%d, Program time: %f s, Sim. time: %f", nm, step_count - 1, ((double)(clock()-start))/CLOCKS_PER_SEC, tt + mt + rt); 
                 printf(" TU, Active/Total Cells: %d/%d, Max key %%: %e\n", a_count, tot_count, (double)(max_key)/(pow(2,64)-1)*100); 
+                // P_PATH = concat_p(P_DIR, "/M", nm, "/moments_", moment_count); record_moments(P, P_PATH, G, tt + mt + rt); free(P_PATH);
             }
             
             if (RECORD) { // record PDF
