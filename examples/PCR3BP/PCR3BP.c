@@ -13,6 +13,7 @@ void PCR3BP(double* f, double* x, double* dx, double* coef){
     f[3] = -2*x[2]+x[1]-(coef[0]*x[1]/r2)-((1-coef[0])*x[1]/r1);
 }
 
+// This function defines the measurement model - required if MEASURE == true
 void rtrr(double* h, double* x, double* dx, double* coef){
     h[0] = pow(pow(x[0] - (1 - coef[0]), 2) + pow(x[1], 2),0.5); 
     h[1] = atan2(x[1], x[0] - (1 - coef[0])); 
