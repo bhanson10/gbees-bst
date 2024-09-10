@@ -10,18 +10,18 @@ DIM_h = 3 # Measurement dimension
 def PCR3BP(x, dx, coef):
     r1 = ((x[0] + coef[0])**2 + (x[1])**2)**1.5
     r2 = ((x[0] - 1 + coef[0])**2 + (x[1])**2)**1.5
-    v1 = x[2]
-    v2 = x[3]
-    v3 = 2*x[3]+x[0]-(coef[0]*(x[0]-1+coef[0])/r2)-((1-coef[0])*(x[0]+coef[0])/r1)
-    v4 = -2*x[2]+x[1]-(coef[0]*x[1]/r2)-((1-coef[0])*x[1]/r1)
-    return [v1, v2, v3, v4]
+    f1 = x[2]
+    f2 = x[3]
+    f3 = 2*x[3]+x[0]-(coef[0]*(x[0]-1+coef[0])/r2)-((1-coef[0])*(x[0]+coef[0])/r1)
+    f4 = -2*x[2]+x[1]-(coef[0]*x[1]/r2)-((1-coef[0])*x[1]/r1)
+    return [f1, f2, f3, f4]
 
-# This function defines the measurement model - required
+# This function defines the measurement model - required if MEASURE == True
 def rtrr(x, dx, coef):
-    v1 = ((x[0] - (1- coef[0]))**2 + (x[1])**2)**0.5 
-    v2 = math.atan2(x[1],  x[0] - (1 - coef[0]))
-    v3 = ((x[0] - (1 - coef[0]))*x[2] + x[1]*x[3])/v1
-    return [v1, v2, v3]
+    h1 = ((x[0] - (1- coef[0]))**2 + (x[1])**2)**0.5 
+    h2 = math.atan2(x[1],  x[0] - (1 - coef[0]))
+    h3 = ((x[0] - (1 - coef[0]))*x[2] + x[1]*x[3])/h1
+    return [h1, h2, h3]
 
 # This function defines the initial grid boundaries - optional
 def PCR3BP_J(x, coef):
