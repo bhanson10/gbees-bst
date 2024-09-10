@@ -9,23 +9,13 @@ DIM_h = 6 # Measurement dimension
 def CR3BP(x, dx, coef):
     r1 = ((x[0] + coef[0])**2 + (x[1])**2 + (x[2])**2)**1.5
     r2 = ((x[0] - 1 + coef[0])**2 + (x[1])**2 + (x[2])**2)**1.5
-    v1 = x[3]
-    v2 = x[4]
-    v3 = x[5]
-    v4 = 2*x[4]+x[0]-(coef[0]*(x[0]-1+coef[0])/r2)-((1-coef[0])*(x[0]+coef[0])/r1)
-    v5 = -2*x[3]+x[1]-(coef[0]*x[1]/r2)-((1-coef[0])*x[1]/r1)
-    v6 = -(coef[0]*x[2]/r2)-((1-coef[0])*x[2]/r1)
-    return [v1, v2, v3, v4, v5, v6]
-
-# This function defines the measurement model - required
-def identity(x, dx, coef):
-    v1 = x[0]
-    v2 = x[1]
-    v3 = x[2]
-    v4 = x[3]
-    v5 = x[5]
-    v6 = x[6]
-    return [v1, v2, v3, v4, v5, v6]
+    f1 = x[3]
+    f2 = x[4]
+    f3 = x[5]
+    f4 = 2*x[4]+x[0]-(coef[0]*(x[0]-1+coef[0])/r2)-((1-coef[0])*(x[0]+coef[0])/r1)
+    f5 = -2*x[3]+x[1]-(coef[0]*x[1]/r2)-((1-coef[0])*x[1]/r1)
+    f6 = -(coef[0]*x[2]/r2)-((1-coef[0])*x[2]/r1)
+    return [f1, f2, f3, f4, f5, f6]
 
 # This function defines the initial grid boundaries - optional
 def CR3BP_J(x, coef):
@@ -59,10 +49,10 @@ NUM_MEAS = 4;                                 # Number of measurements
 DEL_STEP = 20;                                # Number of steps per deletion procedure
 OUTPUT_FREQ = 20;                             # Number of steps per output to terminal
 OUTPUT = False;                               # Write info to terminal
-RECORD = True;                                # Write PDFs to .txt file
-MEASURE = True;                               # Take discrete measurement updates
+RECORD = False;                                # Write PDFs to .txt file
+MEASURE = False;                              # Take discrete measurement updates
 BOUNDS = True;                                # Add inadmissible regions to grid
 #============================================================================================================#
 
 #================================================== GBEES ===================================================#
-gbees.run_gbees(CR3BP, identity, CR3BP_J, G, M, T, P_DIR, M_DIR, NUM_DIST, NUM_MEAS, DEL_STEP, OUTPUT_FREQ, DIM_h, OUTPUT, RECORD, MEASURE, BOUNDS)
+gbees.run_gbees(CR3BP, None, CR3BP_J, G, M, T, P_DIR, M_DIR, NUM_DIST, NUM_MEAS, DEL_STEP, OUTPUT_FREQ, DIM_h, OUTPUT, RECORD, MEASURE, BOUNDS)
