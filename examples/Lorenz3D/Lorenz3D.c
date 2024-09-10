@@ -10,7 +10,7 @@ void Lorenz3D(double* f, double* x, double* dx, double* coef){
     f[2] = -coef[1]*(x[2]+(dx[2]/2.0))+x[0]*x[1]-coef[1]*coef[2];
 }
 
-// This function defines the measurement model - required
+// This function defines the measurement model - required if MEASURE == true
 void z(double* h, double* x, double* dx, double* coef){
     h[0] = x[2];
 }
