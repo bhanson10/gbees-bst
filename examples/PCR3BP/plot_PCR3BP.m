@@ -16,16 +16,16 @@ tiledlayout(1, 2, 'TileSpacing','compact');
 nexttile(1); hold all; 
 axis("equal")
 set(gca, 'FontName', 'Times', 'FontSize', 14);
-xlabel("$x$ (km)", "Interpreter","latex")
-ylabel("$y$ (km)", "Interpreter","latex")
+xlabel("synodic $x$ (km)", "Interpreter","latex")
+ylabel("synodic $y$ (km)", "Interpreter","latex")
 europa = nsidedpoly(1000, 'Center', [(1-prop.mu)*prop.LU, 0], 'Radius', prop.sec_r);
 plot(europa, 'FaceColor', 'm', 'EdgeColor','none');
 
 nexttile(2); hold all; 
 axis("equal")
 set(gca, 'FontName', 'Times', 'FontSize', 14);
-xlabel("$v_x$ (km/s)", "Interpreter","latex")
-ylabel("$v_y$ (km/s)", "Interpreter","latex")
+xlabel("synodic $\dot{x}$ (km/s)", "Interpreter","latex")
+ylabel("synodic $\dot{y}$ (km/s)", "Interpreter","latex")
  
 %% truth
 options = odeset('MaxStep', 1E-3, 'InitialStep', 1E-3, 'RelTol', 1e-6);
