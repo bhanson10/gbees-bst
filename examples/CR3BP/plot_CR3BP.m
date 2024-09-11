@@ -16,21 +16,20 @@ tiledlayout(1, 2, 'TileSpacing','compact');
 nexttile(1); hold all; 
 axis("equal")
 set(gca, 'FontName', 'Times', 'FontSize', 14);
-xlabel("$x$ (km)", "Interpreter","latex")
-ylabel("$y$ (km)", "Interpreter","latex")
-zlabel("$z$ (km)", "Interpreter","latex")
-europa_3d = imread('Europa_map.jpg');
+xlabel("synodic $x$ (km)", "Interpreter","latex")
+ylabel("synodic $y$ (km)", "Interpreter","latex")
+zlabel("synodic $z$ (km)", "Interpreter","latex")
 [X, Y, Z] = sphere(100);  
 X = X.*prop.r + (1-prop.mu)*prop.LU; Y = Y.*prop.r; Z = Z.*prop.r;
-surf(X, Y, Z, 'FaceColor', 'texturemap', 'CData', europa_3d, 'EdgeColor', 'none', 'HandleVisibility', 'off'); alpha(0.75); 
+surf(X, Y, Z, 'FaceColor', 'g', 'EdgeColor', 'none'); alpha(0.3); 
 drawnow;
 
 nexttile(2); hold all; 
 axis("equal")
 set(gca, 'FontName', 'Times', 'FontSize', 14);
-xlabel("$v_x$ (km/s)", "Interpreter","latex")
-ylabel("$v_y$ (km/s)", "Interpreter","latex")
-zlabel("$v_z$ (km/s)", "Interpreter","latex")
+xlabel("synodic $\dot{x}$ (km/s)", "Interpreter","latex")
+ylabel("synodic $\dot{y}$ (km/s)", "Interpreter","latex")
+zlabel("synodic $\dot{z}$ (km/s)", "Interpreter","latex")
 
 %% truth
 options = odeset('MaxStep', 1E-3, 'InitialStep', 1E-3, 'RelTol', 1e-6);
@@ -48,29 +47,6 @@ plot3(x((t <= 12*3600),4),x((t <= 12*3600),5),x((t <= 12*3600),6),'r-','LineWidt
 plot3(x(:,4),x(:,5),x(:,6),'r--','LineWidth', 1, 'DisplayName','Nominal');
 drawnow;
 
-%% monte carlo
-n = 5000; 
-P = diag([2.237500000000000E-8, 2.237500000000000E-8, 2.237500000000000E-8, 5.276700000000000E-7, 5.276700000000000E-7, 5.276700000000000E-7]);
-x0_mc = mvnrnd(ic,P,n);
-xf_mc = []; 
-tspan = [0,12*3600/prop.TU]; 
-for i=1:n
-    [t, x] = ode87(@(t, x) CR3BP(t, x, prop), tspan, x0_mc(i,:), options);
-    xf_mc(i,:) = x(end,:); 
-end
-x0_mc(:,1:6) = x0_mc(:,1:6).*prop.U;
-xf_mc(:,1:6) = xf_mc(:,1:6).*prop.U;
-
-nexttile(1);
-scatter3(x0_mc(:,1), x0_mc(:,2), x0_mc(:,3), 20, 'k', 'filled', 'MarkerEdgeColor', 'none', 'MarkerFaceAlpha', 0.05);
-scatter3(xf_mc(:,1), xf_mc(:,2), x0_mc(:,3), 20, 'k', 'filled', 'MarkerEdgeColor', 'none', 'MarkerFaceAlpha', 0.05);
-drawnow; 
-
-nexttile(2);
-scatter3(x0_mc(:,4), x0_mc(:,5), x0_mc(:,6), 20, 'k', 'filled', 'MarkerEdgeColor', 'none', 'MarkerFaceAlpha', 0.05);
-scatter3(xf_mc(:,4), xf_mc(:,5), x0_mc(:,6), 20, 'k', 'filled', 'MarkerEdgeColor', 'none', 'MarkerFaceAlpha', 0.05);
-drawnow; 
-
 %% GBEES
 NM = 1; 
 p.color = 'b'; p.alpha = [0.1, 0.2, 0.6]; 
@@ -82,12 +58,12 @@ for nm=0:NM-1
     P_DIR_SUB = P_DIR + "/P" + num2str(nm); 
     FILE_LIST = dir(fullfile(P_DIR_SUB, '*.txt'));  % List only .txt files
     num_files = numel(FILE_LIST);
-    
+
     for i=[0, num_files - 1]
         P_FILE = P_DIR_SUB + "/pdf_" + num2str(i) + ".txt";
 
         [x_gbees, P_gbees, n_gbees, t_gbees(count)] = parse_nongaussian_txt(P_FILE, prop);
-    
+
         xest_gbees{count} = zeros(size(x_gbees(1,:)));
         for j=1:n_gbees
             xest_gbees{count} = xest_gbees{count}+x_gbees(j,:).*P_gbees(j);
@@ -102,6 +78,17 @@ for nm=0:NM-1
         count = count + 1;
     end
 end
+
+clear L; clear LH; 
+LH(1) = plot(NaN,NaN,"o","MarkerSize", 10, "MarkerFaceColor","g","MarkerEdgeColor","k");
+L{1} = "Europa\,\,\,";
+LH(2) = plot(NaN,NaN,"k-", "LineWidth",1);
+L{2} = "Nominal\,\,\,";
+LH(3) = fill(nan, nan, nan, "FaceAlpha", 0.7, "FaceColor", 'b', "EdgeColor", "none");
+L{3} = "$p_\mathbf{x}(\mathbf{x}',t_{0+})\,\,\,$";
+leg = legend(gca, LH, L, "Orientation", "Horizontal", "Position", [0.374216319492885, 0.01, 0.25156736101423, 0.075739644688262], "FontSize", 18, "FontName", "times", "Interpreter", "latex");
+leg.Layout.Tile = "south";
+drawnow; 
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %                                FUNCTIONS
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
