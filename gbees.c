@@ -311,14 +311,14 @@ double mc(double th){ // MC flux limiter
     return fmax(0.0, fmin(min1, 2*th)); 
 }
 
-void invertMatrix(Meas M, double* inverse, int size) {
+void inv_mat(double** mat, double* inverse, int size) {
     int i, j, k;
     double ratio;
     double* augmented = (double*)malloc(size * size * 2 * sizeof(double));
 
     for (i = 0; i < size; i++) {
         for (j = 0; j < size; j++) {
-            augmented[i * 2 * size + j] = M.cov[i][j];
+            augmented[i * 2 * size + j] = mat[i][j];
             augmented[i * 2 * size + (j + size)] = (i == j) ? 1.0 : 0.0;
         }
     }
@@ -347,7 +347,7 @@ void invertMatrix(Meas M, double* inverse, int size) {
     free(augmented);
 }
 
-void multiplyMatrixVector(double* matrix, double* vector, double* result, int size) {
+void mul_mat_vec(double* matrix, double* vector, double* result, int size) {
     int i, j;
     for (i = 0; i < size; i++) {
         result[i] = 0;
@@ -357,7 +357,7 @@ void multiplyMatrixVector(double* matrix, double* vector, double* result, int si
     }
 }
 
-double dotProduct(double* vec1, double* vec2, int size) {
+double dot_product(double* vec1, double* vec2, int size) {
     int i;
     double result = 0;
     for (i = 0; i < size; i++) {
@@ -375,9 +375,9 @@ double gauss_probability(int dim, double* x, Meas M){ // MC Calculate gaussian p
     for(int i = 0; i < dim; i++){
         diff[i] = x[i] - M.mean[i]; 
     }
-    invertMatrix(M, M_inv, dim);
-    multiplyMatrixVector(M_inv, diff, M_inv_x, dim);
-    double dot_prod = dotProduct(diff, M_inv_x, dim);
+    inv_mat(M.cov, M_inv, dim);
+    mul_mat_vec(M_inv, diff, M_inv_x, dim);
+    double dot_prod = dot_product(diff, M_inv_x, dim);
     exp_result = exp(-0.5 * dot_prod);
 
     free(M_inv);
@@ -509,18 +509,18 @@ TreeNode* ll_rotate(TreeNode* parent){
     return t;
 }
 
-TreeNode* lr_rotate(TreeNode* parent){
-    TreeNode* t;
-    t = parent->left;
-    parent->left = rr_rotate(t);
-    return ll_rotate(parent);
-}
-
 TreeNode* rl_rotate(TreeNode* parent){
     TreeNode* t;
     t = parent->right;
     parent->right = ll_rotate(t);
     return rr_rotate(parent);
+}
+
+TreeNode* lr_rotate(TreeNode* parent){
+    TreeNode* t;
+    t = parent->left;
+    parent->left = rr_rotate(t);
+    return ll_rotate(parent);
 }
 
 TreeNode* balance(TreeNode* r){
@@ -740,101 +740,6 @@ void record_data(TreeNode* r, const char* FILE_NAME, Grid G, const double t){
     fclose(file);
 }
 
-
-void get_weighted_mean(TreeNode* r, Grid G, double* weighted_mean){
-    if (r == NULL){
-        return;
-    }
-    
-    get_weighted_mean(r->left, G, weighted_mean); 
-    get_weighted_mean(r->right, G, weighted_mean); 
-
-    for(int i = 0; i < G.dim; i++){
-        weighted_mean[i] += r->prob*(G.dx[i]*r->state[i]+G.center[i]);
-    }
-}
-
-void get_weighted_cov(TreeNode* r, Grid G, double* weighted_mean, double** weighted_cov){
-    if (r == NULL){
-        return;
-    }
-    
-    get_weighted_cov(r->left, G, weighted_mean, weighted_cov); 
-    get_weighted_cov(r->right, G, weighted_mean, weighted_cov); 
-
-    double* diff = malloc(G.dim * sizeof(double));
-    for(int i = 0; i < G.dim; i++){
-        diff[i] = weighted_mean[i] - (G.dx[i]*r->state[i]+G.center[i]);
-    }
-
-    for(int i = 0; i < G.dim; i++){
-        for(int j = 0; j < G.dim; j++){
-            weighted_cov[i][j] += r->prob * diff[i] * diff[j];
-        }
-    }
-}
-
-void check_double_precision(Grid G, double* weighted_mean, double** weighted_cov){
-    double EPS = 2.220446049250313e-16;
-
-    for(int i = 0; i < G.dim; i++){
-        if(weighted_mean[i] < EPS){
-            weighted_mean[i] = 0.0;
-        }
-        for(int j = 0; j < G.dim; j++){
-            if(weighted_cov[i][j] < EPS){
-                weighted_cov[i][j] = 0.0;
-            }
-        }
-    }
-}
-
-void write_moments(FILE* myfile, Grid G, double* weighted_mean, double** weighted_cov){
-    
-    for(int i = 0; i < G.dim-1; i++){
-        fprintf(myfile, "%.10e ", weighted_mean[i]);
-    }
-    fprintf(myfile, "%.10e\n\n", weighted_mean[G.dim - 1]);
-
-    for(int i = 0; i < G.dim; i++){
-        for(int j = 0; j < G.dim - 1; j++){
-            fprintf(myfile, "%.10e ", weighted_cov[i][j]);
-        }
-        if(i != G.dim - 1){
-            fprintf(myfile, "%.10e\n", weighted_cov[i][G.dim - 1]); 
-        }else{
-            fprintf(myfile, "%.10e", weighted_cov[i][G.dim - 1]); 
-        }
-    }
-}
-
-void record_moments(TreeNode* r, const char* FILE_NAME, Grid G, const double t){
-    FILE* file = fopen(FILE_NAME, "w");
-    if (file == NULL) {
-        fprintf(stderr, "Error: could not open file %s", FILE_NAME);
-        exit(EXIT_FAILURE);
-    }
-
-    double* weighted_mean = malloc(G.dim * sizeof(double));
-    double** weighted_cov = malloc(G.dim * G.dim * sizeof(double*));
-    for(int i = 0; i < G.dim; i++){
-        weighted_mean[i] = 0; 
-        weighted_cov[i] = malloc(G.dim* sizeof(double *));
-        for(int j = 0; j < G.dim; j++){
-            weighted_cov[i][j] = 0.0;
-        }
-    }
-
-    get_weighted_mean(r, G, weighted_mean); 
-    get_weighted_cov(r, G, weighted_mean, weighted_cov);
-    check_double_precision(G, weighted_mean, weighted_cov); 
-    fprintf(file, "%lf\n\n", t);
-    write_moments(file, G, weighted_mean, weighted_cov);
-    fclose(file);
-    free(weighted_mean);
-    free(weighted_cov);
-}
-
 void create_neighbors(TreeNode** P, TreeNode* r, Grid G, Traj T, bool BOUNDS, double (*BOUND_f)(double*, double*)){
     if (r == NULL){
         return;
@@ -971,12 +876,12 @@ void check_cfl_condition(TreeNode* r, Grid* G){
     G->dt = fmin(G->dt,r->cfl_dt);
 }
 
-void get_dcu(TreeNode* r, Grid G){
+void update_dcu(TreeNode* r, Grid G){
     if (r == NULL){
         return;
     }
-    get_dcu(r->left, G);
-    get_dcu(r->right, G);
+    update_dcu(r->left, G);
+    update_dcu(r->right, G);
 
     r->dcu = 0; 
     TreeNode* i_node; TreeNode* k_node; 
@@ -1052,7 +957,7 @@ void update_ctu(TreeNode* r, Grid G){
 }
 
 void godunov_method(TreeNode** P, Grid G){
-    get_dcu(*P, G);
+    update_dcu(*P, G);
     update_ctu(*P, G);
 }
 
@@ -1232,13 +1137,13 @@ void prune_tree(TreeNode** P, Grid G, int tot_count){
     free(del_keys); 
 }
 
-void measurement_update_recursive(void (*h)(double*, double*, double*, double*), TreeNode* r, Grid G, Meas M, Traj T){
+void meas_up_recursive(void (*h)(double*, double*, double*, double*), TreeNode* r, Grid G, Meas M, Traj T){
     if (r == NULL){
         return;
     }
 
-    measurement_update_recursive(h, r->left, G, M, T);
-    measurement_update_recursive(h, r->right, G, M, T);
+    meas_up_recursive(h, r->left, G, M, T);
+    meas_up_recursive(h, r->right, G, M, T);
 
     double x[G.dim];
     for(int i = 0; i < G.dim; i++){
@@ -1275,7 +1180,6 @@ void run_gbees(void (*f)(double*, double*, double*, double*), void (*h)(double*,
         printf("Timestep: %d-0, Program time: %f s, Sim. time: %f", nm, ((double)(clock()-start))/CLOCKS_PER_SEC, tt); 
         printf(" TU, Active/Total Cells: %d/%d, Max key %%: %e\n", a_count, tot_count, (double)(max_key)/(pow(2,64)-1)*100); 
         if(RECORD){P_PATH = concat_p(P_DIR, "/P", nm, "/pdf_", 0); record_data(P, P_PATH, G, tt); free(P_PATH);};
-        // P_PATH = concat_p(P_DIR, "/M", nm, "/moments_", 0); record_moments(P, P_PATH, G, tt); free(P_PATH);
 
         double mt = 0; int record_count = 1; int step_count = 1; double rt; 
         while(fabs(mt - M.T) > TOL) { // time between discrete measurements
@@ -1299,7 +1203,6 @@ void run_gbees(void (*f)(double*, double*, double*, double*), void (*h)(double*,
                 if ((OUTPUT) && (step_count % OUTPUT_FREQ == 0)) { // print size to terminal
                     printf("Timestep: %d-%d, Program time: %f s, Sim. time: %f", nm, step_count, ((double)(clock()-start))/CLOCKS_PER_SEC, tt + mt + rt); 
                     printf(" TU, Active/Total Cells: %d/%d, Max key %%: %e\n", a_count, tot_count, (double)(max_key)/(pow(2,64)-1)*100); 
-                    // P_PATH = concat_p(P_DIR, "/M", nm, "/moments_", moment_count); record_moments(P, P_PATH, G, tt + mt + rt); free(P_PATH);
                 }
 
                 step_count += 1; G.dt = DBL_MAX;
@@ -1308,7 +1211,6 @@ void run_gbees(void (*f)(double*, double*, double*, double*), void (*h)(double*,
             if (((step_count-1) % OUTPUT_FREQ != 0)||(!OUTPUT)){ // print size to terminal  
                 printf("Timestep: %d-%d, Program time: %f s, Sim. time: %f", nm, step_count - 1, ((double)(clock()-start))/CLOCKS_PER_SEC, tt + mt + rt); 
                 printf(" TU, Active/Total Cells: %d/%d, Max key %%: %e\n", a_count, tot_count, (double)(max_key)/(pow(2,64)-1)*100); 
-                // P_PATH = concat_p(P_DIR, "/M", nm, "/moments_", moment_count); record_moments(P, P_PATH, G, tt + mt + rt); free(P_PATH);
             }
             
             if (RECORD) { // record PDF
@@ -1343,7 +1245,7 @@ void run_gbees(void (*f)(double*, double*, double*, double*), void (*h)(double*,
             free(M_FILE); 
 
             // performing discrete update
-            measurement_update_recursive(h, P, G, M, T);                                     
+            meas_up_recursive(h, P, G, M, T);                                     
             normalize_tree(P, &G, &max_key, &a_count, &tot_count); 
             prune_tree(&P, G, tot_count);
             normalize_tree(P, &G, &max_key, &a_count, &tot_count); 
