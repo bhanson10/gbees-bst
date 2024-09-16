@@ -1,7 +1,7 @@
-clear all; close all; clc;
+% plot_PCR3BP.m, https://github.com/bhanson10/gbees/tree/main/examples/PCR3BP
+% Copyright 2024 by Benjamin Hanson, published under BSD 3-Clause License.
 
-% plot_PCR3BP.m
-% Benjamin Hanson, 2024
+clear all; close all; clc;
 
 %% initializing system properties
 prop.mu = 1.901109735892602e-07; prop.LU = 238529; prop.TU = 18913; prop.sec_r = 2.521000000000000e+02;

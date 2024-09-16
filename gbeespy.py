@@ -1,3 +1,6 @@
+# gbeespy.py, https://github.com/bhanson10/gbees
+# Copyright 2024 by Benjamin Hanson, published under BSD 3-Clause License.
+
 import ctypes as ct
 
 lib = ct.CDLL("../../gbees.so")

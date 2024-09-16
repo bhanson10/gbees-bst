@@ -1,3 +1,6 @@
+// PCR3BP.c, https://github.com/bhanson10/gbees/tree/main/examples/PCR3BP
+// Copyright 2024 by Benjamin Hanson, published under BSD 3-Clause License.
+
 #include "../../gbees.c"
 
 #define DIM_f 4 // State dimension

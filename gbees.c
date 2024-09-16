@@ -1,3 +1,6 @@
+// gbees.c, https://github.com/bhanson10/gbees
+// Copyright 2024 by Benjamin Hanson, published under BSD 3-Clause License.
+
 #include <stdint.h>
 #include <math.h>
 #include <stdlib.h>

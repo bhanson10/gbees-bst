@@ -1,7 +1,7 @@
-close all; clc; clear all; 
+% plot_Lorenz3D.m, https://github.com/bhanson10/gbees/tree/main/examples/Lorenz3D
+% Copyright 2024 by Benjamin Hanson, published under BSD 3-Clause License.
 
-% plot_Lorenz3D.m
-% Benjamin Hanson, 2024
+close all; clc; clear all; 
 
 %% initializing system properties
 prop.d = 3; prop.T = 2; prop.dx = 0.5; prop.sigma = 4; prop.b = 1; prop.r = 48;

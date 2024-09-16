@@ -1,7 +1,7 @@
-clear all; close all; clc;
+% plot_CR3BP.m, https://github.com/bhanson10/gbees/tree/main/examples/CR3BP
+% Copyright 2024 by Benjamin Hanson, published under BSD 3-Clause License.
 
-% plot_CR3BP.m
-% Benjamin Hanson, 2024
+clear all; close all; clc;
 
 %% Initial Condition
 prop.mu = 2.528017528540000E-5; prop.LU = 668519; prop.TU = 48562; prop.sec_r =  1560.8;    

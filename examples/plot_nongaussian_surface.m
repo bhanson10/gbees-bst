@@ -17,6 +17,8 @@ function plot_nongaussian_surface(X,P,isovalue,p)
 %               *     axh -- figure axis
 %               *   alpha -- surface visibility
 %               *    type -- distribution type
+% plot_nongaussian_surface.m, https://github.com/bhanson10/gbees/tree/main/examples
+% Copyright 2024 by Benjamin Hanson, published under BSD 3-Clause License.
 
 % Checks and Balances
 if length(X)~=length(P)

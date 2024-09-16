@@ -1,3 +1,6 @@
+# PCR3BP.py, https://github.com/bhanson10/gbees/tree/main/examples/PCR3BP
+# Copyright 2024 by Benjamin Hanson, published under BSD 3-Clause License.
+
 import sys
 sys.path.append('../../')
 import gbeespy as gbees  # type: ignore
