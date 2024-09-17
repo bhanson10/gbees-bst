@@ -10,7 +10,7 @@
 #include "gbees.h"
 
 
-Meas Meas_create(int dim, const char* M_DIR, const char* M_FILE) {
+Meas Meas_create(int dim, const char *M_DIR, const char *M_FILE) {
     char M_PATH[256];
     snprintf(M_PATH, sizeof(M_PATH), "%s/%s", M_DIR, M_FILE);
 
@@ -85,7 +85,7 @@ void Meas_free(Meas *M) {
     }
 }
 
-Grid Grid_create(int dim, double thresh, double* center, double* dx){
+Grid Grid_create(int dim, double thresh, double *center, double *dx){
     Grid G; 
     G.dim = dim; 
     G.thresh = thresh; 
@@ -105,7 +105,7 @@ Grid Grid_create(int dim, double thresh, double* center, double* dx){
     return G;
 }
 
-void Grid_free(Grid* G) {
+void Grid_free(Grid *G) {
     // Free the allocated memory
     free(G->center);
     free(G->dx);
@@ -116,7 +116,7 @@ void Grid_free(Grid* G) {
 }
 
 
-Traj Traj_create(int n, double* coef){
+Traj Traj_create(int n, double *coef){
     Traj T; 
     T.coef = malloc(n * sizeof(double));
     if (T.coef == NULL) {
@@ -129,7 +129,7 @@ Traj Traj_create(int n, double* coef){
     return T;
 }
 
-void Traj_free(Traj* T) {
+void Traj_free(Traj *T) {
     if (T->coef != NULL) {
         free(T->coef);
         T->coef = NULL;
@@ -626,23 +626,104 @@ void normalize_tree(TreeNode* P, Grid* G, uint64_t* max_key, int* a_count, int* 
     divide_sum(P, prob_sum, G, max_key, a_count, tot_count);
 }
 
-char* concat_m(const char* str1, const char* str2, int num1) {
-    int num1_len = snprintf(NULL, 0, "%d", num1);
-    char* str3 = ".txt"; 
-    size_t total_len = strlen(str1) + strlen(str2) + num1_len + strlen(str3) + 1; 
-    char* result = (char*)malloc(total_len * sizeof(char));
-    if (result == NULL) {
-        perror("Error: memory allocation failure during concat_m");
+void get_weighted_mean(TreeNode* r, Grid* G, double* weighted_mean){
+    if (r == NULL){
+        return;
+    }
+    
+    get_weighted_mean(r->left, G, weighted_mean); 
+    get_weighted_mean(r->right, G, weighted_mean); 
+
+    for(int i = 0; i < G->dim; i++){
+        weighted_mean[i] += r->prob*(G->dx[i]*r->state[i]+G->center[i]);
+    }
+}
+
+TreeNode* insert_node_recursive(TreeNode* r, TreeNode* rnew){
+    if (r == NULL) {
+        return rnew;
+    }
+
+    if (rnew->key < r->key) {
+        r->left = insert_node_recursive(r->left, rnew);
+    } else if (rnew->key > r->key) {
+        r->right = insert_node_recursive(r->right, rnew);
+    }
+
+    return r;
+}
+
+void rebuild_tree(TreeNode* r, TreeNode** Pnew, Grid* G, int* offset){
+    if (r == NULL){
+        return;
+    }
+
+    rebuild_tree(r->left, Pnew, G, offset); 
+    rebuild_tree(r->right, Pnew, G, offset); 
+
+    TreeNode* node = (TreeNode*)malloc(sizeof(TreeNode));
+    if (node == NULL){
+        perror("Error: memory allocation failure during TreeNode creation");
         exit(EXIT_FAILURE);
     }
-    strcpy(result, str1);
-    strcat(result, str2);
-    char num1_str[num1_len + 1];
-    sprintf(num1_str, "%d", num1);
-    strcat(result, num1_str);
-    strcat(result, str3);
-    
-    return result;
+    node->prob = r->prob; 
+    node->v = (double*)malloc(G->dim * sizeof(double));
+    node->ctu = (double*)malloc(G->dim * sizeof(double));
+    node->state = (int*)malloc(G->dim * sizeof(int));
+    node->i_nodes = (TreeNode **)malloc(G->dim * sizeof(TreeNode *));
+    node->k_nodes = (TreeNode **)malloc(G->dim * sizeof(TreeNode *));
+
+    // Check for memory allocation failure
+    if (node->v == NULL || node->ctu == NULL || node->state == NULL || node->i_nodes == NULL || node->k_nodes == NULL) {
+        if (node->v) free(node->v);
+        if (node->ctu) free(node->ctu);
+        if (node->state) free(node->state);
+        if (node->i_nodes) free(node->i_nodes);
+        if (node->k_nodes) free(node->k_nodes);
+        perror("Error: memory allocation failure during TreeNode creation");
+        exit(EXIT_FAILURE);
+    }
+
+    for (int i = 0; i < G->dim; i++) {
+        node->v[i] = r->v[i];
+        node->ctu[i] = r->ctu[i];
+        node->state[i] = r->state[i] - offset[i];
+        node->i_nodes[i] = NULL;
+        node->k_nodes[i] = NULL;
+    }
+    node->key = state_conversion(G->dim, node->state); 
+    node->dcu = r->dcu; 
+    node->cfl_dt = r->cfl_dt; 
+    node->new_f = 1; 
+    node->ik_f = 0; 
+    node->bound_val = r->bound_val; 
+    node->left = NULL; 
+    node->right = NULL; 
+
+    *Pnew = insert_node_recursive(*Pnew, node);
+}
+
+void recenter_pdf(TreeNode** P, Grid* G){
+    double* weighted_mean = malloc(G->dim * sizeof(double));
+    for(int i = 0; i < G->dim; i++) weighted_mean[i] = 0;
+    get_weighted_mean(*P, G, weighted_mean); 
+    int* offset = malloc(G->dim * sizeof(int));
+    for(int i = 0; i < G->dim; i++){
+        offset[i] = (int)round((weighted_mean[i] - G->center[i])/G->dx[i]);
+        G->center[i] += (G->dx[i] * offset[i]); 
+    }
+
+    TreeNode* Pnew = NULL; 
+    rebuild_tree(*P, &Pnew, G, offset);
+    initialize_ik_nodes(Pnew, Pnew, G); 
+    Tree_free(*P);
+
+    *P = Pnew; 
+
+    free(weighted_mean); 
+    free(offset); 
+
+    return; 
 }
 
 char* concat_p(const char* str1, const char* str2, int num1, const char* str3, int num2) {
@@ -681,6 +762,9 @@ void write_file(FILE* myfile, TreeNode* r, Grid G){
         fprintf(myfile, "%.10e", r->prob);
         for (int i = 0; i < G.dim; i++) {
             fprintf(myfile, " %.10e", G.dx[i] * r->state[i] + G.center[i]);
+        }
+        for (int i = 0; i < G.dim; i++) {
+            fprintf(myfile, " %d", r->state[i]);
         }
         fprintf(myfile, "\n");
     }
@@ -1017,7 +1101,6 @@ void mark_cells(TreeNode* r, Grid G, double* del_probs, uint64_t* del_keys, int*
     }
 }
 
-// REF- different definition of qsort_r in MAC and Linux
 #ifdef __linux__ 
   int compare_indices(const void *a, const void *b, void *del_probs) {
 #else  
@@ -1047,7 +1130,6 @@ void sort_by_double(double *del_probs, uint64_t *del_keys, size_t n) {
     }
 
     // Sort the indices based on the corresponding doubles    
-    // REF- different definition of qsort_r in MAC and Linux
     #ifdef __linux__ 
         qsort_r(indices, n, sizeof(int), compare_indices, del_probs);
     #else  
@@ -1170,7 +1252,11 @@ void run_gbees(void (*f)(double*, double*, double*, double*), void (*h)(double*,
 
                 if ((OUTPUT) && (step_count % OUTPUT_FREQ == 0)) { // print size to terminal
                     printf("Timestep: %d-%d, Program time: %f s, Sim. time: %f", nm, step_count, ((double)(clock()-start))/CLOCKS_PER_SEC, tt + mt + rt); 
-                    printf(" TU, Active/Total Cells: %d/%d, Max key %%: %e\n", a_count, tot_count, (double)(max_key)/(pow(2,64)-1)*100); 
+                    printf(" TU, Active/Total Cells: %d/%d, Max key %%: %.10e\n", a_count, tot_count, (double)(max_key)/(pow(2,64)-1)*100); 
+                }
+
+                if((double)(max_key)/(pow(2,64)-1)*100 > 0.9){
+                    recenter_pdf(&P, &G);
                 }
 
                 step_count += 1; G.dt = DBL_MAX;

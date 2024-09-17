@@ -49,7 +49,7 @@ void Traj_free(Traj* T);
 
 typedef struct TreeNode TreeNode;
 
-struct TreeNode { // REF- Remove duplicated typedef
+struct TreeNode { 
     uint64_t key;
     double prob;
     double *v;
@@ -137,7 +137,13 @@ void divide_sum(TreeNode* r, double prob_sum, Grid* G, uint64_t* max_key, int* a
 
 void normalize_tree(TreeNode* P, Grid* G, uint64_t* max_key, int* a_count, int* tot_count);
 
-char* concat_m(const char* str1, const char* str2, int num1);
+void get_weighted_mean(TreeNode* r, Grid* G, double* weighted_mean); 
+
+TreeNode* insert_node_recursive(TreeNode* r, TreeNode* rnew); 
+
+void rebuild_tree(TreeNode* r, TreeNode** Pnew, Grid* G, int* offset); 
+
+void recenter_pdf(TreeNode** P, Grid* G);
 
 char* concat_p(const char* str1, const char* str2, int num1, const char* str3, int num2);
 
