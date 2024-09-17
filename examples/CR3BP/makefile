@@ -14,12 +14,23 @@ OBJS = $(SRCS:%.c=%.o)
 
 TARGET = CR3BP
 
+MODE ?= c
+
 .DEFAULT: all
 
-all: link folders
+all: $(MODE)
 
-folders:
-	mkdir -p results/P0
+c: link folders_c
+	./${TARGET}
+
+python: folders_py
+	python3 -u ${TARGET}.py
+
+folders_c:
+	mkdir -p results/c/P0 
+
+folders_py:
+	mkdir -p results/python/P0
 
 link: ${OBJS}
 	${CC} ${LDFLAGS} -o ${TARGET} ${OBJS} ${LDLIBS}
