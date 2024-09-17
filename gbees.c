@@ -1,27 +1,14 @@
 // gbees.c, https://github.com/bhanson10/gbees
 // Copyright 2024 by Benjamin Hanson, published under BSD 3-Clause License.
 
-#include <stdint.h>
-#include <math.h>
 #include <stdlib.h>
 #include <limits.h>
-#include <stdio.h>
-#include <stdbool.h>
 #include <string.h>
 #include <float.h>
 #include <time.h>
 
-#define TOL 1E-8
+#include "gbees.h"
 
-/*==============================================================================
-                            STRUCTURE DEFINITIONS
-==============================================================================*/
-typedef struct Meas {
-    int dim; 
-    double *mean;
-    double **cov;
-    double T;
-} Meas;
 
 Meas Meas_create(int dim, const char* M_DIR, const char* M_FILE) {
     char M_PATH[256];
@@ -98,16 +85,6 @@ void Meas_free(Meas *M) {
     }
 }
 
-typedef struct Grid {
-    int dim; 
-    double thresh;
-    double dt;
-    double *center;
-    double *dx;
-    double hi_bound;
-    double lo_bound;
-} Grid;
-
 Grid Grid_create(int dim, double thresh, double* center, double* dx){
     Grid G; 
     G.dim = dim; 
@@ -138,9 +115,6 @@ void Grid_free(Grid* G) {
     G->dx = NULL;
 }
 
-typedef struct Traj {
-    double *coef;
-} Traj;
 
 Traj Traj_create(int n, double* coef){
     Traj T; 
@@ -161,25 +135,6 @@ void Traj_free(Traj* T) {
         T->coef = NULL;
     }
 }
-
-typedef struct TreeNode TreeNode;
-
-typedef struct TreeNode {
-    uint64_t key;
-    double prob;
-    double *v;
-    double *ctu;
-    int *state;
-    TreeNode **i_nodes;
-    TreeNode **k_nodes;
-    double dcu;
-    double cfl_dt;
-    int new_f;
-    int ik_f;
-    double bound_val; 
-    TreeNode* left;
-    TreeNode* right;
-} TreeNode;
 
 TreeNode* TreeNode_create(int dim, uint64_t key, double prob, int* state, double J) {
     TreeNode* node = (TreeNode*)malloc(sizeof(TreeNode));
@@ -1062,7 +1017,12 @@ void mark_cells(TreeNode* r, Grid G, double* del_probs, uint64_t* del_keys, int*
     }
 }
 
-int compare_indices(void *del_probs, const void *a, const void *b) {
+// REF- different definition of qsort_r in MAC and Linux
+#ifdef __linux__ 
+  int compare_indices(const void *a, const void *b, void *del_probs) {
+#else  
+  int compare_indices(void *del_probs, const void *a, const void *b) {
+#endif  
     const double *double_list = (double *)del_probs;
     int idx1 = *(const int *)a;
     int idx2 = *(const int *)b;
@@ -1086,8 +1046,13 @@ void sort_by_double(double *del_probs, uint64_t *del_keys, size_t n) {
         indices[i] = i;
     }
 
-    // Sort the indices based on the corresponding doubles
-    qsort_r(indices, n, sizeof(int), del_probs, compare_indices);
+    // Sort the indices based on the corresponding doubles    
+    // REF- different definition of qsort_r in MAC and Linux
+    #ifdef __linux__ 
+        qsort_r(indices, n, sizeof(int), compare_indices, del_probs);
+    #else  
+        qsort_r(indices, n, sizeof(int), del_probs, compare_indices);  
+    #endif 
 
     // Create a temporary array to hold the sorted uint64_t's
     double *sorted_del_probs = malloc(n * sizeof(uint64_t));
