@@ -1,10 +1,8 @@
 // CR3BP.c, https://github.com/bhanson10/gbees/tree/main/examples/CR3BP
 // Copyright 2024 by Benjamin Hanson, published under BSD 3-Clause License.
 
-#include "../../gbees.c"
-
-#define DIM_f 6 // State dimension
-#define DIM_h 6 // Measurement dimension
+#include "../../gbees.h" 
+#include "CR3BP.h"
 
 // This function defines the dynamics model - required
 void CR3BP(double* f, double* x, double* dx, double* coef){
@@ -26,7 +24,7 @@ double CR3BP_J(double* x, double* coef){
     return J;
 }
 
-int main(){
+int main(void){
     //=================================== Read in initial discrete measurement =================================//
     printf("Reading in initial discrete measurement...\n\n");
 
@@ -45,17 +43,17 @@ int main(){
     }
     Grid G = Grid_create(DIM_f, 1E-7, M.mean, del); // Inputs: (dimension, probability threshold, center, grid width)       
 
-    double coef[] = {2.528017528540000E-5};        // CR3BP trajectory attributes (mu)
-    Traj T = Traj_create(1, coef);                // Inputs: (# of coefficients, coefficients)
+    double coef[] = {2.528017528540000E-5};         // CR3BP trajectory attributes (mu)
+    Traj T = Traj_create(1, coef);                  // Inputs: (# of coefficients, coefficients)
 
-    int NUM_DIST = 17;                             // Number of distributions recorded per measurement
-    int NUM_MEAS = 1;                              // Number of measurements
-    int DEL_STEP = 20;                             // Number of steps per deletion procedure
-    int OUTPUT_FREQ = 20;                          // Number of steps per output to terminal
+    int NUM_DIST = 17;                              // Number of distributions recorded per measurement
+    int NUM_MEAS = 1;                               // Number of measurements
+    int DEL_STEP = 20;                              // Number of steps per deletion procedure
+    int OUTPUT_FREQ = 20;                           // Number of steps per output to terminal
     bool OUTPUT = false;                            // Write info to terminal after certain amount of steps
     bool RECORD = false;                            // Write PDFs to .txt file
     bool MEASURE = false;                           // Take discrete measurement updates
-    bool BOUNDS = true;                            // Add inadmissible regions to grid
+    bool BOUNDS = true;                             // Add inadmissible regions to grid
     //==========================================================================================================//
 
     //================================================= GBEES ==================================================//
@@ -63,4 +61,3 @@ int main(){
 
     return 0;
 }
-
