@@ -377,6 +377,20 @@ TreeNode* insert_recursive(TreeNode* r, Grid* G, Traj T, double prob, uint64_t k
     return r;
 }
 
+TreeNode* insert_node_recursive(TreeNode* r, TreeNode* rnew){
+    if (r == NULL) {
+        return rnew;
+    }
+
+    if (rnew->key < r->key) {
+        r->left = insert_node_recursive(r->left, rnew);
+    } else if (rnew->key > r->key) {
+        r->right = insert_node_recursive(r->right, rnew);
+    }
+
+    return r;
+}
+
 TreeNode* search_recursive(TreeNode* r, uint64_t key) {
     if (r == NULL || r->key == key) {
         return r;
@@ -639,20 +653,6 @@ void get_weighted_mean(TreeNode* r, Grid* G, double* weighted_mean){
     }
 }
 
-TreeNode* insert_node_recursive(TreeNode* r, TreeNode* rnew){
-    if (r == NULL) {
-        return rnew;
-    }
-
-    if (rnew->key < r->key) {
-        r->left = insert_node_recursive(r->left, rnew);
-    } else if (rnew->key > r->key) {
-        r->right = insert_node_recursive(r->right, rnew);
-    }
-
-    return r;
-}
-
 void rebuild_tree(TreeNode* r, TreeNode** Pnew, Grid* G, int* offset){
     if (r == NULL){
         return;
@@ -762,9 +762,6 @@ void write_file(FILE* myfile, TreeNode* r, Grid G){
         fprintf(myfile, "%.10e", r->prob);
         for (int i = 0; i < G.dim; i++) {
             fprintf(myfile, " %.10e", G.dx[i] * r->state[i] + G.center[i]);
-        }
-        for (int i = 0; i < G.dim; i++) {
-            fprintf(myfile, " %d", r->state[i]);
         }
         fprintf(myfile, "\n");
     }

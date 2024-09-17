@@ -97,6 +97,8 @@ double gauss_probability(int dim, double* x, Meas M);
 ==============================================================================*/
 TreeNode* insert_recursive(TreeNode* r, Grid* G, Traj T, double prob, uint64_t key, int* state, bool BOUNDS, double (*BOUND_f)(double*, double*));
 
+TreeNode* insert_node_recursive(TreeNode* r, TreeNode* rnew);
+
 TreeNode* search_recursive(TreeNode* r, uint64_t key);
 
 TreeNode* min_value_node(TreeNode* node);
@@ -137,9 +139,7 @@ void divide_sum(TreeNode* r, double prob_sum, Grid* G, uint64_t* max_key, int* a
 
 void normalize_tree(TreeNode* P, Grid* G, uint64_t* max_key, int* a_count, int* tot_count);
 
-void get_weighted_mean(TreeNode* r, Grid* G, double* weighted_mean); 
-
-TreeNode* insert_node_recursive(TreeNode* r, TreeNode* rnew); 
+void get_weighted_mean(TreeNode* r, Grid* G, double* weighted_mean);  
 
 void rebuild_tree(TreeNode* r, TreeNode** Pnew, Grid* G, int* offset); 
 
