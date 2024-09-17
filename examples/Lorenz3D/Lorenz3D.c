@@ -1,10 +1,8 @@
 // Lorenz3D.c, https://github.com/bhanson10/gbees/tree/main/examples/Lorenz3D
 // Copyright 2024 by Benjamin Hanson, published under BSD 3-Clause License.
 
-#include "../../gbees.c"
-
-#define DIM_f 3 // State dimension
-#define DIM_h 1 // Measurement dimension
+#include "../../gbees.h" 
+#include "Lorenz3D.h"
 
 // This function defines the dynamics model - required
 void Lorenz3D(double* f, double* x, double* dx, double* coef){
@@ -18,7 +16,7 @@ void z(double* h, double* x, double* dx, double* coef){
     h[0] = x[2];
 }
 
-int main(){
+int main(void){
     //=================================== Read in initial discrete measurement =================================//
     printf("Reading in initial discrete measurement...\n\n");
 
