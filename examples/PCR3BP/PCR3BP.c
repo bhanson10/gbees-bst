@@ -33,7 +33,7 @@ int main(void){
     //=================================== Read in initial discrete measurement =================================//
     printf("Reading in initial discrete measurement...\n\n");
 
-    char* P_DIR = "<path_to_pdf>"; // Saved PDFs path
+    char* P_DIR = "./results/c"; // Saved PDFs path
     char* M_DIR = "./measurements";    // Measurement path
     char* M_FILE = "measurement0.txt"; // Measurement file
     Meas M = Meas_create(DIM_f, M_DIR, M_FILE);
@@ -56,7 +56,7 @@ int main(void){
     int DEL_STEP = 20;                              // Number of steps per deletion procedure
     int OUTPUT_FREQ = 20;                           // Number of steps per output to terminal
     bool OUTPUT = false;                            // Write info to terminal
-    bool RECORD = false;                            // Write PDFs to .txt file
+    bool RECORD = true;                             // Write PDFs to .txt file
     bool MEASURE = true;                            // Take discrete measurement updates
     bool BOUNDS = true;                             // Add inadmissible regions to grid
     //==========================================================================================================//
