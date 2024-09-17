@@ -73,7 +73,6 @@ void Tree_free(TreeNode* r);
 void TreeNode_free(TreeNode* r);
 
 
-
 /*==============================================================================
                         NON-MEMBER FUNCTION DEFINITIONS
 ==============================================================================*/
@@ -91,6 +90,7 @@ void mul_mat_vec(double* matrix, double* vector, double* result, int size);
 double dot_product(double* vec1, double* vec2, int size);
 
 double gauss_probability(int dim, double* x, Meas M);
+
 
 /*==============================================================================
                     BINARY SEARCH TREE FUNCTION DEFINITIONS
@@ -161,7 +161,6 @@ void update_prob(TreeNode* r, Grid G);
 
 void mark_cells(TreeNode* r, Grid G, double* del_probs, uint64_t* del_keys, int* idx);
 
-// REF- different definition of qsort_r in MAC and Linux
 #ifdef __linux__ 
   int compare_indices(const void *a, const void *b, void *del_probs);
 #else  
