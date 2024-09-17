@@ -1,10 +1,8 @@
 // PCR3BP.c, https://github.com/bhanson10/gbees/tree/main/examples/PCR3BP
 // Copyright 2024 by Benjamin Hanson, published under BSD 3-Clause License.
 
-#include "../../gbees.c"
-
-#define DIM_f 4 // State dimension
-#define DIM_h 3 // Measurement dimension
+#include "../../gbees.h" // REF- do not include c files
+#include "PCR3BP.h"
 
 // This function defines the dynamics model - required
 void PCR3BP(double* f, double* x, double* dx, double* coef){
@@ -31,7 +29,7 @@ double PCR3BP_J(double* x, double* coef){
     return J;
 }
 
-int main(){
+int main(void){
     //=================================== Read in initial discrete measurement =================================//
     printf("Reading in initial discrete measurement...\n\n");
 
