@@ -17,12 +17,23 @@ OBJS = $(SRCS:%.c=%.o)
 
 TARGET = Lorenz3D
 
+MODE ?= c
+
 .DEFAULT: all
 
-all: link folders
+all: $(MODE)
 
-folders:
-	mkdir -p results/P0 results/P1 
+c: link folders_c 
+	./${TARGET}
+
+python: folders_py
+	python3 -u ${TARGET}.py
+
+folders_c:
+	mkdir -p results/c/P0 results/c/P1 
+
+folders_py:
+	mkdir -p results/python/P0 results/python/P1 
 
 link: ${OBJS}
 	${CC} ${LDFLAGS} -o ${TARGET} ${OBJS} ${LDLIBS}
