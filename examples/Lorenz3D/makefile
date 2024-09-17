@@ -22,7 +22,7 @@ TARGET = Lorenz3D
 all: link folders
 
 folders:
-	mkdir -p results/P0 results/P1	
+	mkdir -p results/P0 results/P1 
 
 link: ${OBJS}
 	${CC} ${LDFLAGS} -o ${TARGET} ${OBJS} ${LDLIBS}
