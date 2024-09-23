@@ -50,7 +50,7 @@ int main(void){
     int NUM_MEAS = 1;                               // Number of measurements
     int DEL_STEP = 20;                              // Number of steps per deletion procedure
     int OUTPUT_FREQ = 20;                           // Number of steps per output to terminal
-    bool OUTPUT = false;                            // Write info to terminal after certain amount of steps
+    bool OUTPUT = true;                            // Write info to terminal after certain amount of steps
     bool RECORD = true;                             // Write PDFs to .txt file
     bool MEASURE = false;                           // Take discrete measurement updates
     bool BOUNDS = true;                             // Add inadmissible regions to grid
