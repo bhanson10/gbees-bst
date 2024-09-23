@@ -50,7 +50,7 @@ drawnow;
 %% GBEES
 NM = 1; 
 p.color = 'b'; p.alpha = [0.1, 0.2, 0.6]; 
-P_DIR = "./results/c";
+P_DIR = "<path_to_pdf>";
 
 count = 1;
 for nm=0:NM-1
