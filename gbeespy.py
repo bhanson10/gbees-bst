@@ -52,26 +52,6 @@ def Traj_create(n, coef):
     coef = (ct.c_double * n)(*coef)
     return lib.Traj_create(n, coef)
 
-class TreeNode(ct.Structure):
-    pass
-
-TreeNode._fields_ = [
-    ("key", ct.c_ulong),
-    ("prob", ct.c_double),
-    ("v", ct.POINTER(ct.c_double)),
-    ("ctu", ct.POINTER(ct.c_double)),
-    ("state", ct.POINTER(ct.c_int)),
-    ("i_nodes", ct.POINTER(ct.POINTER(TreeNode))),
-    ("k_nodes", ct.POINTER(ct.POINTER(TreeNode))),
-    ("dcu", ct.c_double),
-    ("cfl_dt", ct.c_double),
-    ("new_f", ct.c_int),
-    ("ik_f", ct.c_int),
-    ("bound_val", ct.c_double),
-    ("left", ct.POINTER(TreeNode)),
-    ("right", ct.POINTER(TreeNode))
-]
-
 def run_gbees(f, h, BOUND_f, G, M, T, P_DIR, M_DIR, NUM_DIST, NUM_MEAS, DEL_STEP, OUTPUT_FREQ, DIM_h, OUTPUT, RECORD, MEASURE, BOUNDS):
 
     c_P_DIR = P_DIR.encode('utf-8')
