@@ -5,7 +5,7 @@
 #include "CR3BP.h"
 
 // This function defines the dynamics model - required
-void CR3BP(double* f, double* x, double* dx, double* coef){
+void CR3BP(double* f, double* x, double t, double* dx, double* coef){
     double r1 = pow(pow(x[0]+coef[0],2) + pow(x[1],2) + pow(x[2],2), 1.5);
     double r2 = pow(pow(x[0]-1+coef[0],2) + pow(x[1],2) + pow(x[2],2), 1.5);
     f[0] = x[3];

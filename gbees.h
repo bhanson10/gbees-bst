@@ -28,6 +28,7 @@ void Meas_free(Meas *M);
 typedef struct Grid {
     int dim; 
     double thresh;
+    double t; 
     double dt;
     double *center;
     double *dx;
@@ -123,13 +124,13 @@ TreeNode* balance(TreeNode* r);
 /*==============================================================================
                         GBEES FUNCTION DEFINITIONS
 ==============================================================================*/
-void initialize_adv(void (*f)(double*, double*, double*, double*), TreeNode* r, Grid* G, Traj T);
+void initialize_adv(void (*f)(double*, double*, double, double*, double*), TreeNode* r, Grid* G, Traj T);
 
 void initialize_ik_nodes(TreeNode* P, TreeNode* r, Grid* G);
 
 void recursive_loop(TreeNode** P, Grid* G, Meas M, Traj T, int level, int* current_state, double* current_state_vec, bool BOUNDS, double (*BOUND_f)(double*, double*));
 
-void initialize_grid(void (*f)(double*, double*, double*, double*), TreeNode** P, Grid* G, Meas M, Traj T, bool BOUNDS, double (*BOUND_f)(double*, double*));
+void initialize_grid(void (*f)(double*, double*, double, double*, double*), TreeNode** P, Grid* G, Meas M, Traj T, bool BOUNDS, double (*BOUND_f)(double*, double*));
 
 void set_bounds(TreeNode* r, Grid* G);
 
@@ -153,7 +154,7 @@ void record_data(TreeNode* r, const char* FILE_NAME, Grid G, const double t);
 
 void create_neighbors(TreeNode** P, TreeNode* r, Grid G, Traj T, bool BOUNDS, double (*BOUND_f)(double*, double*));
 
-void grow_tree(void (*f)(double*, double*, double*, double*), TreeNode** P, Grid G, Traj T, bool BOUNDS, double (*BOUND_f)(double*, double*));
+void grow_tree(void (*f)(double*, double*, double, double*, double*), TreeNode** P, Grid G, Traj T, bool BOUNDS, double (*BOUND_f)(double*, double*));
 
 void check_cfl_condition(TreeNode* r, Grid* G);
 
@@ -179,8 +180,8 @@ void delete_cells(TreeNode** P, Grid G, double* del_probs, uint64_t* del_keys, i
 
 void prune_tree(TreeNode** P, Grid G, int tot_count);
 
-void meas_up_recursive(void (*h)(double*, double*, double*, double*), TreeNode* r, Grid G, Meas M, Traj T);
+void meas_up_recursive(void (*h)(double*, double*, double, double*, double*), TreeNode* r, Grid G, Meas M, Traj T);
 
-void run_gbees(void (*f)(double*, double*, double*, double*), void (*h)(double*, double*, double*, double*), double (*BOUND_f)(double*, double*), Grid G, Meas M, Traj T, char* P_DIR, char* M_DIR, int NUM_DIST, int NUM_MEAS, int DEL_STEP, int OUTPUT_FREQ, int DIM_h, bool OUTPUT, bool RECORD, bool MEASURE, bool BOUNDS);
+void run_gbees(void (*f)(double*, double*, double, double*, double*), void (*h)(double*, double*, double, double*, double*), double (*BOUND_f)(double*, double*), Grid G, Meas M, Traj T, char* P_DIR, char* M_DIR, int NUM_DIST, int NUM_MEAS, int DEL_STEP, int OUTPUT_FREQ, int DIM_h, bool OUTPUT, bool RECORD, bool MEASURE, bool BOUNDS);
 
 #endif

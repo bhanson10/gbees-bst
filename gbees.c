@@ -89,6 +89,7 @@ Grid Grid_create(int dim, double thresh, double *center, double *dx){
     Grid G; 
     G.dim = dim; 
     G.thresh = thresh; 
+    G.t = 0; 
     G.dt = DBL_MAX; 
     G.center = malloc(dim * sizeof(double));
     G.dx = malloc(dim * sizeof(double *));
@@ -169,6 +170,7 @@ TreeNode* TreeNode_create(int dim, uint64_t key, double prob, int* state, double
         node->k_nodes[i] = NULL;
     }
     node->new_f = 0; 
+    node->ik_f = 0; 
     node->bound_val = J; 
     node->left = NULL; 
     node->right = NULL; 
@@ -519,7 +521,7 @@ TreeNode* balance(TreeNode* r){
 /*==============================================================================
                         GBEES FUNCTION DEFINITIONS
 ==============================================================================*/
-void initialize_adv(void (*f)(double*, double*, double*, double*), TreeNode* r, Grid* G, Traj T){
+void initialize_adv(void (*f)(double*, double*, double, double*, double*), TreeNode* r, Grid* G, Traj T){
     if(r == NULL){ 
         return;
     }
@@ -532,7 +534,7 @@ void initialize_adv(void (*f)(double*, double*, double*, double*), TreeNode* r, 
             x[i] = G->dx[i]*r->state[i]+G->center[i];
         }
         double xk[G->dim];
-        (*f)(xk, x, G->dx, T.coef); 
+        (*f)(xk, x, G->t, G->dx, T.coef); 
 
         double sum = 0;
         for(int i = 0; i < G->dim; i++){
@@ -588,7 +590,7 @@ void recursive_loop(TreeNode** P, Grid* G, Meas M, Traj T, int level, int* curre
     }
 }
 
-void initialize_grid(void (*f)(double*, double*, double*, double*), TreeNode** P, Grid* G, Meas M, Traj T, bool BOUNDS, double (*BOUND_f)(double*, double*)){
+void initialize_grid(void (*f)(double*, double*, double, double*, double*), TreeNode** P, Grid* G, Meas M, Traj T, bool BOUNDS, double (*BOUND_f)(double*, double*)){
     int current_state[G->dim]; double current_state_vec[G->dim];
     recursive_loop(P, G, M, T, 0, current_state, current_state_vec, BOUNDS, BOUND_f);
     *P = balance(*P); 
@@ -897,7 +899,7 @@ void create_neighbors(TreeNode** P, TreeNode* r, Grid G, Traj T, bool BOUNDS, do
     }
 }
 
-void grow_tree(void (*f)(double*, double*, double*, double*), TreeNode** P, Grid G, Traj T, bool BOUNDS, double (*BOUND_f)(double*, double*)){
+void grow_tree(void (*f)(double*, double*, double, double*, double*), TreeNode** P, Grid G, Traj T, bool BOUNDS, double (*BOUND_f)(double*, double*)){
     create_neighbors(P, *P, G, T, BOUNDS, BOUND_f);
     *P = balance(*P); 
     initialize_adv(f, *P, &G, T);
@@ -1184,7 +1186,7 @@ void prune_tree(TreeNode** P, Grid G, int tot_count){
     free(del_keys); 
 }
 
-void meas_up_recursive(void (*h)(double*, double*, double*, double*), TreeNode* r, Grid G, Meas M, Traj T){
+void meas_up_recursive(void (*h)(double*, double*, double, double*, double*), TreeNode* r, Grid G, Meas M, Traj T){
     if (r == NULL){
         return;
     }
@@ -1198,13 +1200,13 @@ void meas_up_recursive(void (*h)(double*, double*, double*, double*), TreeNode* 
     }
 
     double y[M.dim];
-    (*h)(y, x, G.dx, T.coef); 
+    (*h)(y, x, G.t, G.dx, T.coef);
 
     double prob = gauss_probability(M.dim, y, M);   
     r->prob *= prob;
 }
 
-void run_gbees(void (*f)(double*, double*, double*, double*), void (*h)(double*, double*, double*, double*), double (*BOUND_f)(double*, double*), Grid G, Meas M, Traj T, char* P_DIR, char* M_DIR, int NUM_DIST, int NUM_MEAS, int DEL_STEP, int OUTPUT_FREQ, int DIM_h, bool OUTPUT, bool RECORD, bool MEASURE, bool BOUNDS){
+void run_gbees(void (*f)(double*, double*, double, double*, double*), void (*h)(double*, double*, double, double*, double*), double (*BOUND_f)(double*, double*), Grid G, Meas M, Traj T, char* P_DIR, char* M_DIR, int NUM_DIST, int NUM_MEAS, int DEL_STEP, int OUTPUT_FREQ, int DIM_h, bool OUTPUT, bool RECORD, bool MEASURE, bool BOUNDS){
     char* P_PATH;
     uint64_t max_key; 
     int a_count; 
@@ -1237,7 +1239,7 @@ void run_gbees(void (*f)(double*, double*, double*, double*), void (*h)(double*,
                 grow_tree(f, &P, G, T, BOUNDS, BOUND_f);
                 check_cfl_condition(P, &G); 
                 G.dt = fmin(G.dt, RECORD_TIME - rt);
-                rt += G.dt;
+                rt += G.dt; G.t += G.dt; 
                 godunov_method(&P, G);
                 update_prob(P, G);
                 normalize_tree(P, &G, &max_key, &a_count, &tot_count); 

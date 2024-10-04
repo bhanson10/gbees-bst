@@ -9,7 +9,7 @@ DIM_f = 6 # State dimension
 DIM_h = 6 # Measurement dimension
 
 # This function defines the dynamics model - required
-def CR3BP(x, dx, coef):
+def CR3BP(x, t, dx, coef):
     r1 = ((x[0] + coef[0])**2 + (x[1])**2 + (x[2])**2)**1.5
     r2 = ((x[0] - 1 + coef[0])**2 + (x[1])**2 + (x[2])**2)**1.5
     f1 = x[3]
