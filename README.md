@@ -1,2 +1,1 @@
-# Grid-based, Bayesian Estimation Exploiting Sparsity (GBEES)
-Please head to [https://bhanson10.github.io/GBEES.pdf](https://bhanson10.github.io/GBEES.pdf) for a thorough explanation of GBEES.
+This depository is defunct. Please head to [https://github.com/bhanson10/gbees](https://github.com/bhanson10/gbees) for the updated version of gbees.
